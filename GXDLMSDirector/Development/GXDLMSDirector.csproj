@@ -1,0 +1,315 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project ToolsVersion="4.0" DefaultTargets="Build" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <PropertyGroup>
+    <Configuration Condition=" '$(Configuration)' == '' ">Debug</Configuration>
+    <Platform Condition=" '$(Platform)' == '' ">AnyCPU</Platform>
+    <ProductVersion>9.0.30729</ProductVersion>
+    <SchemaVersion>2.0</SchemaVersion>
+    <ProjectGuid>{0CA083FF-4071-4E07-AFFF-5B2E31A11D45}</ProjectGuid>
+    <OutputType>WinExe</OutputType>
+    <AppDesignerFolder>Properties</AppDesignerFolder>
+    <RootNamespace>GXDLMSDirector</RootNamespace>
+    <AssemblyName>GXDLMSDirector</AssemblyName>
+    <TargetFrameworkVersion>v3.5</TargetFrameworkVersion>
+    <FileAlignment>512</FileAlignment>
+    <ApplicationIcon>GXDLMSDirector.ico</ApplicationIcon>
+    <FileUpgradeFlags>
+    </FileUpgradeFlags>
+    <UpgradeBackupLocation>
+    </UpgradeBackupLocation>
+    <OldToolsVersion>3.5</OldToolsVersion>
+    <IsWebBootstrapper>false</IsWebBootstrapper>
+    <PublishUrl>publish\</PublishUrl>
+    <Install>true</Install>
+    <InstallFrom>Disk</InstallFrom>
+    <UpdateEnabled>true</UpdateEnabled>
+    <UpdateMode>Background</UpdateMode>
+    <UpdateInterval>7</UpdateInterval>
+    <UpdateIntervalUnits>Days</UpdateIntervalUnits>
+    <UpdatePeriodically>false</UpdatePeriodically>
+    <UpdateRequired>false</UpdateRequired>
+    <MapFileExtensions>true</MapFileExtensions>
+    <SupportUrl>http://gurux.fi/GXDLMSDirectorHelp</SupportUrl>
+    <ErrorReportUrl>http://gurux.fi/project/issues/GXDLMSDirector</ErrorReportUrl>
+    <ProductName>GXDLMSDirector</ProductName>
+    <PublisherName>Gurux Ltd</PublisherName>
+    <CreateWebPageOnPublish>true</CreateWebPageOnPublish>
+    <WebPage>publish.htm</WebPage>
+    <ApplicationRevision>0</ApplicationRevision>
+    <ApplicationVersion>0.0.0.0</ApplicationVersion>
+    <UseApplicationTrust>true</UseApplicationTrust>
+    <CreateDesktopShortcut>true</CreateDesktopShortcut>
+    <PublishWizardCompleted>true</PublishWizardCompleted>
+    <BootstrapperEnabled>true</BootstrapperEnabled>
+  </PropertyGroup>
+  <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Debug|AnyCPU' ">
+    <DebugSymbols>true</DebugSymbols>
+    <DebugType>full</DebugType>
+    <Optimize>false</Optimize>
+    <OutputPath>bin\Debug\</OutputPath>
+    <DefineConstants>DEBUG;TRACE</DefineConstants>
+    <ErrorReport>prompt</ErrorReport>
+    <WarningLevel>4</WarningLevel>
+  </PropertyGroup>
+  <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Release|AnyCPU' ">
+    <DebugType>pdbonly</DebugType>
+    <Optimize>false</Optimize>
+    <OutputPath>bin\Release\</OutputPath>
+    <DefineConstants>DEBUG;TRACE</DefineConstants>
+    <ErrorReport>prompt</ErrorReport>
+    <WarningLevel>4</WarningLevel>
+  </PropertyGroup>
+  <PropertyGroup>
+    <ManifestCertificateThumbprint>CAC4A554188741D10E4F149122BF5D97F168A782</ManifestCertificateThumbprint>
+  </PropertyGroup>
+  <PropertyGroup>
+    <ManifestKeyFile>
+    </ManifestKeyFile>
+  </PropertyGroup>
+  <PropertyGroup>
+    <GenerateManifests>true</GenerateManifests>
+  </PropertyGroup>
+  <PropertyGroup>
+    <SignManifests>false</SignManifests>
+  </PropertyGroup>
+  <PropertyGroup />
+  <PropertyGroup />
+  <PropertyGroup>
+    <SignAssembly>false</SignAssembly>
+  </PropertyGroup>
+  <PropertyGroup>
+    <AssemblyOriginatorKeyFile>
+    </AssemblyOriginatorKeyFile>
+  </PropertyGroup>
+  <PropertyGroup>
+    <TargetZone>Internet</TargetZone>
+  </PropertyGroup>
+  <PropertyGroup />
+  <PropertyGroup>
+    <StartupObject>GXDLMSDirector.Program</StartupObject>
+  </PropertyGroup>
+  <PropertyGroup />
+  <PropertyGroup>
+    <ApplicationManifest>Properties\app.manifest</ApplicationManifest>
+  </PropertyGroup>
+  <ItemGroup>
+    <Reference Include="System" />
+    <Reference Include="System.Core">
+      <RequiredTargetFramework>3.5</RequiredTargetFramework>
+    </Reference>
+    <Reference Include="System.Data" />
+    <Reference Include="System.Deployment" />
+    <Reference Include="System.Drawing" />
+    <Reference Include="System.Messaging" />
+    <Reference Include="System.Windows.Forms" />
+    <Reference Include="System.Xml" />
+  </ItemGroup>
+  <ItemGroup>
+    <Compile Include="AuthenticationGmacForm.cs">
+      <SubType>Form</SubType>
+    </Compile>
+    <Compile Include="AuthenticationGmacForm.Designer.cs">
+      <DependentUpon>AuthenticationGmacForm.cs</DependentUpon>
+    </Compile>
+    <Compile Include="Extensions\Actaris.cs" />
+    <Compile Include="GXAsyncWork.cs" />
+    <Compile Include="CryptHelper.cs" />
+    <Compile Include="DeviceState.cs" />
+    <Compile Include="IGXManufacturerExtension.cs" />
+    <Compile Include="ManufacturerSettings\GXHelpers.cs" />
+    <Compile Include="GXObisValueItemForm.cs">
+      <SubType>Form</SubType>
+    </Compile>
+    <Compile Include="GXObisValueItemForm.Designer.cs">
+      <DependentUpon>GXObisValueItemForm.cs</DependentUpon>
+    </Compile>
+    <Compile Include="ManufacturerSettings\GXError.cs" />
+    <Compile Include="MRUManager.cs" />
+    <Compile Include="ManufacturerSettings\GXLogWriter.cs" />
+    <Compile Include="GXValueSerializer.cs" />
+    <Compile Include="GXDLMSObjectSerializer.cs" />
+    <Compile Include="GuruxWin32.cs" />
+    <Compile Include="GXDLMSCommunicator.cs" />
+    <Compile Include="GXDLMSDevice.cs" />
+    <Compile Include="GXDLMSDeviceCollection.cs" />
+    <Compile Include="MainForm.cs">
+      <SubType>Form</SubType>
+    </Compile>
+    <Compile Include="MainForm.Designer.cs">
+      <DependentUpon>MainForm.cs</DependentUpon>
+    </Compile>
+    <Compile Include="ManufacturerForm.cs">
+      <SubType>Form</SubType>
+    </Compile>
+    <Compile Include="ManufacturerForm.Designer.cs">
+      <DependentUpon>ManufacturerForm.cs</DependentUpon>
+    </Compile>
+    <Compile Include="ManufacturersForm.cs">
+      <SubType>Form</SubType>
+    </Compile>
+    <Compile Include="ManufacturersForm.Designer.cs">
+      <DependentUpon>ManufacturersForm.cs</DependentUpon>
+    </Compile>
+    <Compile Include="OBISCodeForm.cs">
+      <SubType>Form</SubType>
+    </Compile>
+    <Compile Include="OBISCodeForm.Designer.cs">
+      <DependentUpon>OBISCodeForm.cs</DependentUpon>
+    </Compile>
+    <Compile Include="OBISCodesForm.cs">
+      <SubType>Form</SubType>
+    </Compile>
+    <Compile Include="OBISCodesForm.Designer.cs">
+      <DependentUpon>OBISCodesForm.cs</DependentUpon>
+    </Compile>
+    <Compile Include="Program.cs" />
+    <Compile Include="DevicePropertiesForm.cs">
+      <SubType>Form</SubType>
+    </Compile>
+    <Compile Include="DevicePropertiesForm.Designer.cs">
+      <DependentUpon>DevicePropertiesForm.cs</DependentUpon>
+    </Compile>
+    <Compile Include="Properties\AssemblyInfo.cs" />
+    <EmbeddedResource Include="AuthenticationGmacForm.resx">
+      <DependentUpon>AuthenticationGmacForm.cs</DependentUpon>
+    </EmbeddedResource>
+    <EmbeddedResource Include="GXObisValueItemForm.resx">
+      <DependentUpon>GXObisValueItemForm.cs</DependentUpon>
+      <SubType>Designer</SubType>
+    </EmbeddedResource>
+    <EmbeddedResource Include="MainForm.resx">
+      <DependentUpon>MainForm.cs</DependentUpon>
+      <SubType>Designer</SubType>
+    </EmbeddedResource>
+    <EmbeddedResource Include="DevicePropertiesForm.resx">
+      <DependentUpon>DevicePropertiesForm.cs</DependentUpon>
+      <SubType>Designer</SubType>
+    </EmbeddedResource>
+    <EmbeddedResource Include="ManufacturerForm.resx">
+      <DependentUpon>ManufacturerForm.cs</DependentUpon>
+      <SubType>Designer</SubType>
+    </EmbeddedResource>
+    <EmbeddedResource Include="ManufacturersForm.resx">
+      <DependentUpon>ManufacturersForm.cs</DependentUpon>
+      <SubType>Designer</SubType>
+    </EmbeddedResource>
+    <EmbeddedResource Include="OBISCodeForm.resx">
+      <DependentUpon>OBISCodeForm.cs</DependentUpon>
+      <SubType>Designer</SubType>
+    </EmbeddedResource>
+    <EmbeddedResource Include="OBISCodesForm.resx">
+      <DependentUpon>OBISCodesForm.cs</DependentUpon>
+      <SubType>Designer</SubType>
+    </EmbeddedResource>
+    <EmbeddedResource Include="Properties\Resources.resx">
+      <Generator>ResXFileCodeGenerator</Generator>
+      <LastGenOutput>Resources.Designer.cs</LastGenOutput>
+      <SubType>Designer</SubType>
+    </EmbeddedResource>
+    <Compile Include="Properties\Resources.Designer.cs">
+      <AutoGen>True</AutoGen>
+      <DependentUpon>Resources.resx</DependentUpon>
+      <DesignTime>True</DesignTime>
+    </Compile>
+    <None Include="app.config">
+      <SubType>Designer</SubType>
+    </None>
+    <None Include="packages.config" />
+    <None Include="Properties\app.manifest" />
+    <None Include="Properties\Settings.settings">
+      <Generator>SettingsSingleFileGenerator</Generator>
+      <LastGenOutput>Settings.Designer.cs</LastGenOutput>
+    </None>
+    <Compile Include="Properties\Settings.Designer.cs">
+      <AutoGen>True</AutoGen>
+      <DependentUpon>Settings.settings</DependentUpon>
+      <DesignTimeSharedInput>True</DesignTimeSharedInput>
+    </Compile>
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="Resources\NewMnu.bmp" />
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="Resources\DeleteMnu.bmp" />
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="Resources\OpenMnu.bmp" />
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="Resources\OptionsMnu.bmp" />
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="Resources\ReadMnu.bmp" />
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="Resources\SaveMnu.bmp" />
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="Resources\WriteMnu.bmp" />
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="Resources\ConnectMnu.bmp" />
+  </ItemGroup>
+  <ItemGroup>
+    <Content Include="GXDLMSDirector.ico" />
+    <Content Include="Resources\warning.ico" />
+  </ItemGroup>
+  <ItemGroup>
+    <BootstrapperPackage Include="Microsoft.Net.Client.3.5">
+      <Visible>False</Visible>
+      <ProductName>.NET Framework 3.5 SP1 Client Profile</ProductName>
+      <Install>false</Install>
+    </BootstrapperPackage>
+    <BootstrapperPackage Include="Microsoft.Net.Framework.3.5.SP1">
+      <Visible>False</Visible>
+      <ProductName>.NET Framework 3.5 SP1</ProductName>
+      <Install>true</Install>
+    </BootstrapperPackage>
+  </ItemGroup>
+  <ItemGroup>
+    <FileAssociation Include=".gxc">
+      <Visible>False</Visible>
+      <Description>GXDLMSDirector file</Description>
+      <Progid>GXDLMSDirector</Progid>
+      <DefaultIcon>GXDLMSDirector.ico</DefaultIcon>
+    </FileAssociation>
+  </ItemGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\..\GURUX.Common\Development\Gurux.Common.csproj">
+      <Project>{749652d4-4779-4869-ad81-5211a661cd1b}</Project>
+      <Name>Gurux.Common</Name>
+    </ProjectReference>
+    <ProjectReference Include="..\..\GURUX.DLMS.Net\Development\Gurux.DLMS.csproj">
+      <Project>{efd71bff-ad54-45ed-b473-305813c2f83a}</Project>
+      <Name>Gurux.DLMS</Name>
+    </ProjectReference>
+    <ProjectReference Include="..\..\GURUX.DLMS.UI.Net\development\Gurux.DLMS.UI.Net.csproj">
+      <Project>{0c3e9c19-5f09-4bfc-8e08-45448d4e55a6}</Project>
+      <Name>Gurux.DLMS.UI.Net</Name>
+    </ProjectReference>
+    <ProjectReference Include="..\..\GURUX.Net\Development\Gurux.Net.csproj">
+      <Project>{cb63ea09-d6bc-4b1d-927e-83041a222d54}</Project>
+      <Name>Gurux.Net</Name>
+    </ProjectReference>
+    <ProjectReference Include="..\..\GURUX.Serial\Development\Gurux.Serial.csproj">
+      <Project>{d07a57d7-f2e7-4a0f-95d1-ef3b1fd688f0}</Project>
+      <Name>Gurux.Serial</Name>
+    </ProjectReference>
+    <ProjectReference Include="..\..\GURUX.Terminal\Development\Gurux.Terminal.csproj">
+      <Project>{6210c774-782d-4292-af4c-5998ac70bafd}</Project>
+      <Name>Gurux.Terminal</Name>
+    </ProjectReference>
+  </ItemGroup>
+  <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
+  <PropertyGroup>
+    <PostBuildEvent>
+    </PostBuildEvent>
+  </PropertyGroup>
+  <!-- To modify your build process, add your task inside one of the targets below and uncomment it. 
+       Other similar extension points exist, see Microsoft.Common.targets.
+  <Target Name="BeforeBuild">
+  </Target>
+  <Target Name="AfterBuild">
+  </Target>
+  -->
+</Project>
