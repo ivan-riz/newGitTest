@@ -284,10 +284,21 @@ namespace Gurux.DLMS
                 {
                     return "";
                 }
-                return Value.LocalDateTime.ToString(format);
+                //return Value.LocalDateTime.ToString(format);
+                //string myLocalValueIn = Value.LocalDateTime.ToString(format);
+                format = System.Globalization.CultureInfo.CurrentCulture.DateTimeFormat.ShortDatePattern + " " + System.Globalization.CultureInfo.CurrentCulture.DateTimeFormat.ShortTimePattern;
+                string myLocalValueIn = Value.LocalDateTime.ToString(format);
+                myValueListInIF.Add(myLocalValueIn);
+                return myLocalValueIn;
             }
-            return Value.LocalDateTime.ToString();
+            //return Value.LocalDateTime.ToString();
+            string myLocalValueOut = Value.LocalDateTime.ToString();
+            myValueListOutIF.Add(myLocalValueOut);
+            return myLocalValueOut;
         }
+
+        static List<string> myValueListInIF = new List<string>();
+        static List<string> myValueListOutIF = new List<string>();
 
         #region IConvertible Members
 

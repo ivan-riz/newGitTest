@@ -508,7 +508,8 @@ namespace Gurux.DLMS.Objects
                     }
                     else if (e.Value is String)
                     {
-                        Time = DateTime.ParseExact((String)e.Value, CultureInfo.CurrentUICulture.DateTimeFormat.ShortDatePattern + " " + CultureInfo.CurrentUICulture.DateTimeFormat.LongTimePattern, CultureInfo.CurrentUICulture);
+                        //Time = DateTime.ParseExact((String)e.Value, CultureInfo.CurrentCulture.DateTimeFormat.ShortDatePattern + " " + CultureInfo.CurrentUICulture.DateTimeFormat.LongTimePattern, CultureInfo.CurrentUICulture);
+                        Time = DateTime.ParseExact((String)e.Value, CultureInfo.CurrentCulture.DateTimeFormat.ShortDatePattern + " " + CultureInfo.CurrentCulture.DateTimeFormat.ShortTimePattern, CultureInfo.CurrentCulture);
                     }
                     else
                     {
