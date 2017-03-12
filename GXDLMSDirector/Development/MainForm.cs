@@ -1551,23 +1551,31 @@ namespace GXDLMSDirector
                     else if (this.ObjectTree.SelectedNode.Tag is GXDLMSObjectCollection)
                     {
                         GXDLMSObjectCollection objects = (GXDLMSObjectCollection)this.ObjectTree.SelectedNode.Tag;
-                        GXDLMSDevice dev = objects.Tag as GXDLMSDevice;
-                        dev.KeepAliveStop();
-                        OnProgress(dev, "Writing...", 0, 1);
-                        foreach (GXDLMSObject obj in objects)
-                        {
-                            dev.Comm.Write(obj, obj, 0, new List<object>());
-                        }
-                        dev.KeepAliveStart();
+                        //GXDLMSDevice dev = objects.Tag as GXDLMSDevice;
+                        //dev.KeepAliveStop();
+                        //OnProgress(dev, "Writing...", 0, 1);
+                        //foreach (GXDLMSObject obj in objects)
+                        //{
+                        //    dev.Comm.Write(obj, obj, 0, new List<object>());
+                        //}
+                        //dev.KeepAliveStart();
+
+                        objects.ToList().ForEach(o => WriteObject(o));
+
+                        //foreach (GXDLMSObject obj in objects)
+                        //{
+                        //    WriteObject(obj);
+                        //}
                     }
                     else if (this.ObjectTree.SelectedNode.Tag is GXDLMSObject)
                     {
                         GXDLMSObject obj = (GXDLMSObject)this.ObjectTree.SelectedNode.Tag;
-                        GXDLMSDevice dev = obj.Parent.Tag as GXDLMSDevice;
-                        dev.KeepAliveStop();
-                        OnProgress(dev, "Writing...", 0, 1);
-                        dev.Comm.Write(obj, obj, 0, new List<object>());
-                        dev.KeepAliveStart();
+                        WriteObject(obj);
+                        //GXDLMSDevice dev = obj.Parent.Tag as GXDLMSDevice;
+                        //dev.KeepAliveStop();
+                        //OnProgress(dev, "Writing...", 0, 1);
+                        //dev.Comm.Write(obj, obj, 0, new List<object>());
+                        //dev.KeepAliveStart();
                     }
                 }
             }
@@ -1579,6 +1587,15 @@ namespace GXDLMSDirector
             {
                 UpdateTransaction(false);
             }
+        }
+
+        private void WriteObject(GXDLMSObject obj)
+        {
+            GXDLMSDevice dev = obj.Parent.Tag as GXDLMSDevice;
+            dev.KeepAliveStop();
+            OnProgress(dev, "Writing...", 0, 1);
+            dev.Comm.Write(obj, obj, 0, new List<object>());
+            dev.KeepAliveStart();
         }
 
         /// <summary>
