@@ -111,10 +111,7 @@ namespace Gurux.Serial
                 }
             }
             Dirty = true;
-            if (propertyChanged != null)
-            {
-                propertyChanged(this, new PropertyChangedEventArgs("PortName"));
-            }
+            propertyChanged?.Invoke(this, new PropertyChangedEventArgs("PortName"));
         }
 
         #region IGXPropertyPage Members
@@ -221,37 +218,25 @@ namespace Gurux.Serial
         private void BaudRateCB_SelectedIndexChanged(object sender, EventArgs e)
         {
             Dirty = true;
-            if (propertyChanged != null)
-            {
-                propertyChanged(this, new PropertyChangedEventArgs("BaudRate"));
-            }
+            propertyChanged?.Invoke(this, new PropertyChangedEventArgs("BaudRate"));
         }
 
         private void DataBitsCB_SelectedIndexChanged(object sender, EventArgs e)
         {
             Dirty = true;
-            if (propertyChanged != null)
-            {
-                propertyChanged(this, new PropertyChangedEventArgs("DataBits"));
-            }
+            propertyChanged?.Invoke(this, new PropertyChangedEventArgs("DataBits"));
         }
 
         private void ParityCB_SelectedIndexChanged(object sender, EventArgs e)
         {
             Dirty = true;
-            if (propertyChanged != null)
-            {
-                propertyChanged(this, new PropertyChangedEventArgs("Parity"));
-            }
+            propertyChanged?.Invoke(this, new PropertyChangedEventArgs("Parity"));
         }
 
         private void StopBitsCB_SelectedIndexChanged(object sender, EventArgs e)
         {
             Dirty = true;
-            if (propertyChanged != null)
-            {
-                propertyChanged(this, new PropertyChangedEventArgs("StopBits"));
-            }
+            propertyChanged?.Invoke(this, new PropertyChangedEventArgs("StopBits"));
         }
     }
 }

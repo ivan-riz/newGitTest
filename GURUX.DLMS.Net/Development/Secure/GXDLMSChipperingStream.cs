@@ -132,15 +132,15 @@ namespace Gurux.DLMS.Secure
         /// <summary>
         /// Convert byte array to Little Endian.
         /// </summary>
-        /// <param name="data"></param>
+        /// <param name="value"></param>
         /// <param name="offset"></param>
         /// <returns></returns>
-        static UInt32 ToUInt32(byte[] value, int offset)
+        static uint ToUInt32(byte[] value, int offset)
         {
             return (uint)(value[offset] | value[++offset] << 8 | value[++offset] << 16 | value[++offset] << 24);
         }
 
-        static UInt32 SubWord(uint value)
+        static uint SubWord(uint value)
         {
             return (uint)SBox[value & 0xFF] | (((uint)SBox[(value >> 8) & 0xFF]) << 8) |
                    (((uint)SBox[(value >> 16) & 0xFF]) << 16) | (((uint)SBox[(value >> 24) & 0xFF]) << 24);
@@ -149,10 +149,10 @@ namespace Gurux.DLMS.Secure
         /// <summary>
         /// Shift value.
         /// </summary>
-        /// <param name="r"></param>
+        /// <param name="value"></param>
         /// <param name="shift"></param>
         /// <returns></returns>
-        UInt32 Shift(UInt32 value, int shift)
+        uint Shift(uint value, int shift)
         {
             return (value >> shift) | (value << (32 - shift));
         }
@@ -397,7 +397,7 @@ namespace Gurux.DLMS.Secure
         /// <summary>
         /// Encrypt data block.
         /// </summary>
-        /// <param name="KW"></param>
+        /// <param name="key"></param>
         void EncryptBlock(uint[,] key)
         {
             int r;
@@ -491,7 +491,7 @@ namespace Gurux.DLMS.Secure
         /// <summary>
         /// Convert Big Endian byte array to Little Endian UInt 32.
         /// </summary>
-        /// <param name="bs"></param>
+        /// <param name="buff"></param>
         /// <param name="offset"></param>
         /// <returns></returns>
         internal static uint BEToUInt32(byte[] buff, int offset)
@@ -503,7 +503,7 @@ namespace Gurux.DLMS.Secure
         /// Shift block to right.
         /// </summary>
         /// <param name="block"></param>
-        /// <param name="n"></param>
+        /// <param name="count"></param>
         internal static void ShiftRight(uint[] block, int count)
         {
             uint bit = 0;
@@ -544,7 +544,7 @@ namespace Gurux.DLMS.Secure
         /// Make Xor for 128 bits.
         /// </summary>
         /// <param name="block">block.</param>
-        /// <param name="val"></param>
+        /// <param name="value"></param>
         static void Xor(byte[] block, byte[] value)
         {
             for (int pos = 0; pos != 16; ++pos)
@@ -557,7 +557,7 @@ namespace Gurux.DLMS.Secure
         /// Make Xor for 128 bits.
         /// </summary>
         /// <param name="block">block.</param>
-        /// <param name="val"></param>
+        /// <param name="value"></param>
         static void Xor(uint[] block, uint[] value)
         {
             for (int pos = 0; pos != 4; ++pos)
@@ -832,7 +832,7 @@ namespace Gurux.DLMS.Secure
         /// <summary>
         /// Decrypt data using AES RFC3394.
         /// </summary>
-        /// <param name="data">Decrypted data.</param>
+        /// <param name="input">Decrypted data.</param>
         internal byte[] DecryptAes(byte[] input)
         {
             int n = input.Length / 8;
@@ -940,8 +940,8 @@ namespace Gurux.DLMS.Secure
         /// <summary>
         /// Generate AES keys.
         /// </summary>
+        /// <param name="encrypt"></param>
         /// <param name="key"></param>
-        /// <param name="forEncryption"></param>
         /// <returns></returns>
         uint[,] GenerateKey(bool encrypt, byte[] key)
         {

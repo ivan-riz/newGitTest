@@ -78,7 +78,7 @@ namespace Gurux.DLMS
         /// <summary>
         /// Block index.
         /// </summary>
-        public UInt16 blockIndex;
+        public ushort blockIndex;
 
         /// <summary>
         /// Constructor.
@@ -94,7 +94,7 @@ namespace Gurux.DLMS
            GXByteBuffer forAttributeDescriptor, GXByteBuffer forData)
         {
             settings = forSettings;
-            blockIndex = (UInt16)settings.BlockIndex;
+            blockIndex = (ushort)settings.BlockIndex;
             command = forCommand;
             count = forCount;
             requestType = forCommandType;

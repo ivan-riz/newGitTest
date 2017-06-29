@@ -422,7 +422,7 @@ namespace Gurux.Common
                     valueSize = Marshal.SizeOf(valueType);
                     readBytes = (valueSize * count);
                 }
-                else if (type == typeof(bool) || type == typeof(Boolean))
+                else if (type == typeof(bool) || type == typeof(bool))
                 {
                     readBytes = 1;
                 }
@@ -744,8 +744,7 @@ namespace Gurux.Common
             {
                 if (Environment.UserInteractive)
                 {
-                    Control tmp = parent as Control;
-                    if (tmp != null)
+                    if (parent is Control tmp)
                     {
                         if (tmp.InvokeRequired)
                         {
@@ -785,8 +784,7 @@ namespace Gurux.Common
             {
                 if (Environment.UserInteractive)
                 {
-                    Control tmp = parent as Control;
-                    if (tmp != null)
+                    if (parent is Control tmp)
                     {
                         if (tmp.InvokeRequired)
                         {

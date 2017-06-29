@@ -39,7 +39,9 @@ namespace Gurux.DLMS.Secure
     using System.Collections.Generic;
     using System.Linq;
     using System.Text;
+#if !WINDOWS_UWP
     using System.Security.Cryptography;
+#endif
     using Gurux.DLMS.Internal;
     using Gurux.DLMS.Enums;
 
@@ -75,7 +77,7 @@ namespace Gurux.DLMS.Secure
         ///<returns>
         ///Chiphered text.
         ///</returns>
-        public static byte[] Secure(GXDLMSSettings settings, GXICipher cipher, UInt32 ic, byte[] data, byte[] secret)
+        public static byte[] Secure(GXDLMSSettings settings, GXICipher cipher, uint ic, byte[] data, byte[] secret)
         {
             byte[] tmp;
             if (settings.Authentication == Authentication.High)
@@ -105,7 +107,7 @@ namespace Gurux.DLMS.Secure
             // Get shared secret
             if (settings.Authentication == Authentication.HighGMAC)
             {
-                challenge.Set(data);              
+                challenge.Set(data);
             }
             else
             {
@@ -115,19 +117,23 @@ namespace Gurux.DLMS.Secure
             tmp = challenge.Array();
             if (settings.Authentication == Authentication.HighMD5)
             {
+#if !WINDOWS_UWP
                 using (MD5 md5Hash = MD5.Create())
                 {
                     tmp = md5Hash.ComputeHash(tmp);
                     return tmp;
                 }
+#endif
             }
             else if (settings.Authentication == Authentication.HighSHA1)
             {
+#if !WINDOWS_UWP
                 using (SHA1 sha = new SHA1CryptoServiceProvider())
                 {
                     tmp = sha.ComputeHash(tmp);
                     return tmp;
                 }
+#endif
             }
             else if (settings.Authentication == Authentication.HighGMAC)
             {
@@ -137,7 +143,7 @@ namespace Gurux.DLMS.Secure
                 p.Type = CountType.Tag;
                 challenge.Clear();
                 challenge.SetUInt8((byte)Security.Authentication);
-                challenge.SetUInt32(p.FrameCounter);
+                challenge.SetUInt32(p.InvocationCounter);
                 challenge.Set(GXDLMSChippering.EncryptAesGcm(p, tmp));
                 tmp = challenge.Array();
                 return tmp;
@@ -161,7 +167,7 @@ namespace Gurux.DLMS.Secure
             // Texas Instruments accepts only 16 byte long challenge.
             // For this reason challenge size is 16 bytes at the moment.
             int len = 16;
-//            int len = r.Next(57) + 8;
+            //            int len = r.Next(57) + 8;
             byte[] result = new byte[len];
             for (int pos = 0; pos != len; ++pos)
             {

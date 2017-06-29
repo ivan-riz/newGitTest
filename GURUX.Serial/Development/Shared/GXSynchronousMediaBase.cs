@@ -242,8 +242,7 @@ namespace Gurux.Shared
             {
                 Array.Copy(m_Received, tmp, nFound);
             }
-            int readBytes = 0;
-            object data = GXCommon.ByteArrayToObject(tmp, typeof(T), out readBytes);
+            object data = GXCommon.ByteArrayToObject(tmp, typeof(T), out int readBytes);
             //Remove read data.
             receivedSize -= nFound;
             //Received size can go less than zero if we have received data and we try to read more.

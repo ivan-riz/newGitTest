@@ -43,12 +43,16 @@ namespace Gurux.DLMS
     using Gurux.DLMS.Enums;
     using Gurux.DLMS.Secure;
     using Gurux.DLMS.Internal;
+    using Objects.Enums;
 
     /// <summary>
     /// This class includes DLMS communication settings.
     /// </summary>
     public class GXDLMSSettings
     {
+        private bool useLogicalNameReferencing;
+
+
         ///<summary>
         /// Server frame sequence starting number.
         ///</summary>
@@ -62,7 +66,7 @@ namespace Gurux.DLMS
         ///<summary>
         /// Default Max received PDU size.
         ///</summary>
-        private const UInt16 DefaultMaxReceivePduSize = 0xFFFF;
+        private const ushort DefaultMaxReceivePduSize = 0xFFFF;
 
         /// <summary>
         /// Invoke ID.
@@ -72,7 +76,7 @@ namespace Gurux.DLMS
         /// <summary>
         /// Invoke ID.
         /// </summary>
-        internal UInt32 longInvokeID = 0x1;
+        internal uint longInvokeID = 0x1;
 
         ///<summary>
         ///Client to server challenge.
@@ -107,22 +111,22 @@ namespace Gurux.DLMS
         /// <summary>
         /// Long data count.
         /// </summary>
-        internal UInt16 Count;
+        internal uint Count;
 
         /// <summary>
         /// Long data index.
         /// </summary>
-        internal UInt16 Index;
+        internal uint Index;
 
         /// <summary>
         /// Maximum PDU size.
         /// </summary>
-        private UInt16 maxReceivePDUSize;
+        private ushort maxReceivePDUSize;
 
         /// <summary>
-        /// Proposed conformance block.
+        /// When connection is made client tells what kind of services it want's to use.
         /// </summary>
-        //TODO: Add this when SN and LN settings are removed. internal Conformance ProposedConformance = (Conformance)0;
+        internal Conformance ProposedConformance = (Conformance)0;
 
         /// <summary>
         /// Server tells what functionality is available and client will know it.
@@ -151,28 +155,24 @@ namespace Gurux.DLMS
         }
 
         /// <summary>
-        /// Standard says that Time zone is from normal time to UTC in minutes.
-        /// If meter is configured to use UTC time (UTC to normal time) set this to true.
+        /// Used security suite.
         /// </summary>
-        internal bool UtcTimeZone
+        internal SecuritySuite SecuritySuite
         {
             get;
             set;
         }
 
-        ///<summary>
-        ///Constructor.
-        ///</summary>
-        public GXDLMSSettings() : this(false)
+        /// <summary>
+        /// Standard says that Time zone is from normal time to UTC in minutes.
+        /// If meter is configured to use UTC time (UTC to normal time) set this to true.
+        /// </summary>
+        internal bool UseUtc2NormalTime
         {
+            get;
+            set;
         }
-        ///<summary>
-        ///Constructor.
-        ///</summary>
-        public GXDLMSSettings(GXDLMSObjectCollection objects) : this(false)
-        {
-            Objects = objects;
-        }
+
         ///<summary>
         ///Constructor.
         ///</summary>
@@ -188,20 +188,7 @@ namespace Gurux.DLMS
             IsServer = server;
             Objects = new GXDLMSObjectCollection();
             Limits = new GXDLMSLimits();
-            LnSettings = new GXDLMSLNSettings();
-            SnSettings = new GXDLMSSNSettings();
-            LnSettings.Conformance = Conformance.BlockTransferWithAction |
-                        Conformance.BlockTransferWithSetOrWrite |
-                        Conformance.BlockTransferWithGetOrRead |
-                        Conformance.Set | Conformance.SelectiveAccess |
-                        Conformance.Action | Conformance.MultipleReferences |
-                        Conformance.Get | Conformance.GeneralProtection;
-
-            SnSettings.Conformance = Conformance.InformationReport |
-                        Conformance.Read | Conformance.UnconfirmedWrite |
-                        Conformance.Write | Conformance.ParameterizedAccess |
-                        Conformance.MultipleReferences |
-                        Conformance.GeneralProtection;
+            ProposedConformance = GXDLMSClient.GetInitialConformance(false);
             ResetFrameSequence();
         }
 
@@ -216,10 +203,7 @@ namespace Gurux.DLMS
             }
             set
             {
-                if (!UseCustomChallenge || ctoSChallenge == null)
-                {
-                    ctoSChallenge = value;
-                }
+                ctoSChallenge = value;
             }
         }
 
@@ -234,10 +218,7 @@ namespace Gurux.DLMS
             }
             set
             {
-                if (!UseCustomChallenge || stoCChallenge == null)
-                {
-                    stoCChallenge = value;
-                }
+                stoCChallenge = value;
             }
         }
 
@@ -355,9 +336,16 @@ namespace Gurux.DLMS
         ///<summary>
         /// Generates I-frame.
         ///</summary>
-        internal byte NextSend()
+        internal byte NextSend(bool first)
         {
-            SenderFrame = IncreaseReceiverSequence(IncreaseSendSequence(SenderFrame));
+            if (first)
+            {
+                SenderFrame = IncreaseReceiverSequence(IncreaseSendSequence(SenderFrame));
+            }
+            else
+            {
+                SenderFrame = IncreaseSendSequence(SenderFrame);
+            }
             return SenderFrame;
         }
 
@@ -380,27 +368,9 @@ namespace Gurux.DLMS
         }
 
         ///<summary>
-        /// Gets Logical Name settings.
-        ///</summary>
-        public GXDLMSLNSettings LnSettings
-        {
-            get;
-            private set;
-        }
-
-        ///<summary>
-        /// Short name settings.
-        ///</summary>
-        public GXDLMSSNSettings SnSettings
-        {
-            get;
-            private set;
-        }
-
-        ///<summary>
         ///Current block index.
-        //////</summary>
-        public UInt32 BlockIndex
+        ///</summary>
+        public uint BlockIndex
         {
             get;
             internal set;
@@ -410,7 +380,7 @@ namespace Gurux.DLMS
         ///  Gets starting block index. Default is One based, but some meters use Zero based value.
         ///  Usually this is not used.
         /// </summary>
-        public UInt32 StartingBlockIndex
+        public uint StartingBlockIndex
         {
             get;
             internal set;
@@ -499,7 +469,7 @@ namespace Gurux.DLMS
         /// <summary>
         /// Maximum PDU size.
         /// </summary>
-        public UInt16 MaxPduSize
+        public ushort MaxPduSize
         {
             get
             {
@@ -518,7 +488,7 @@ namespace Gurux.DLMS
         /// <summary>
         /// Server maximum PDU size.
         /// </summary>
-        public UInt16 MaxServerPDUSize
+        public ushort MaxServerPDUSize
         {
             get;
             set;
@@ -529,8 +499,18 @@ namespace Gurux.DLMS
         /// </summary>
         public bool UseLogicalNameReferencing
         {
-            get;
-            set;
+            get
+            {
+                return useLogicalNameReferencing;
+            }
+            set
+            {
+                if (useLogicalNameReferencing != value)
+                {
+                    useLogicalNameReferencing = value;
+                    ProposedConformance = GXDLMSClient.GetInitialConformance(value);
+                }
+            }
         }
 
         /// <summary>

@@ -34,8 +34,6 @@
 
 using System;
 using System.Collections.Generic;
-using System.Linq;
-using System.Text;
 using Gurux.DLMS.Enums;
 using System.ComponentModel;
 
@@ -77,6 +75,142 @@ namespace Gurux.DLMS
                 {
                     Value = new DateTimeOffset(value, TimeZoneInfo.Local.GetUtcOffset(value));
                 }
+                if (value.IsDaylightSavingTime())
+                {
+                    Status |= ClockStatus.DaylightSavingActive;
+                }
+            }
+        }
+
+
+        /// <summary>
+        /// Constructor
+        /// </summary>
+        /// <param name="value">Date time value as a string.</param>
+        public GXDateTime(string value)
+            : base()
+        {
+            if (value != null)
+            {
+                int year = 2000, month = 1, day = 1, hour = 0, min = 0, sec = 0;
+                //System.Globalization.CultureInfo culture = System.Globalization.CultureInfo.CurrentUICulture;
+                System.Globalization.CultureInfo culture = System.Globalization.CultureInfo.CurrentCulture;
+#if !WINDOWS_UWP
+                //string dateSeparator = culture.DateTimeFormat.DateSeparator, timeSeparator = culture.DateTimeFormat.TimeSeparator;
+                string dateSeparator = culture.DateTimeFormat.DateSeparator, timeSeparator = culture.DateTimeFormat.TimeSeparator;
+                List<string> shortDatePattern = new List<string>(culture.DateTimeFormat.ShortDatePattern.Split(new string[] { dateSeparator }, StringSplitOptions.RemoveEmptyEntries));
+#else
+                //In UWP Standard Date and Time Format Strings are used.
+                string dateSeparator = Internal.GXCommon.GetDateSeparator(), timeSeparator = Internal.GXCommon.GetTimeSeparator();
+                List<string> shortDatePattern = new List<string>("yyyy-MM-dd".Split(new string[] { dateSeparator }, StringSplitOptions.RemoveEmptyEntries));
+#endif
+                List<string> shortTimePattern = new List<string>(culture.DateTimeFormat.LongTimePattern.Split(new string[] { timeSeparator }, StringSplitOptions.RemoveEmptyEntries));
+                //string[] values = value.Trim().Split(new string[] { dateSeparator, timeSeparator, " " }, StringSplitOptions.None);
+                string[] values = value.Trim().Split(new string[] { dateSeparator, timeSeparator, " " }, StringSplitOptions.RemoveEmptyEntries);
+                if (shortDatePattern.Count != values.Length && shortDatePattern.Count + shortTimePattern.Count != values.Length)
+                {
+                    throw new ArgumentOutOfRangeException("Invalid DateTime");
+                }
+                for (int pos = 0; pos != shortDatePattern.Count; ++pos)
+                {
+                    bool skip = false;
+                    if (values[pos] == "*")
+                    {
+                        skip = true;
+                    }
+                    if (shortDatePattern[pos] == "yyyy")
+                    {
+                        if (skip)
+                        {
+                            Skip |= DateTimeSkips.Year;
+                        }
+                        else
+                        {
+                            year = int.Parse(values[pos]);
+                        }
+                    }
+                    else if (string.Compare(shortDatePattern[pos], "M", true) == 0)
+                    {
+                        if (skip)
+                        {
+                            Skip |= DateTimeSkips.Month;
+                        }
+                        else
+                        {
+                            month = int.Parse(values[pos]);
+                        }
+                    }
+                    else if (string.Compare(shortDatePattern[pos], "d", true) == 0)
+                    {
+                        if (skip)
+                        {
+                            Skip |= DateTimeSkips.Day;
+                        }
+                        else
+                        {
+                            day = int.Parse(values[pos]);
+                        }
+                    }
+                    else
+                    {
+                        throw new ArgumentOutOfRangeException("Invalid Date time pattern.");
+                    }
+                }
+                if (values.Length > 3)
+                {
+                    for (int pos = 0; pos != shortTimePattern.Count; ++pos)
+                    {
+                        bool skip = false;
+                        //if (values[3 + pos] == "*" || values[3 + pos] == "")
+                        if (values[3 + pos] == "*")
+                        {
+                            skip = true;
+                        }
+                        if (string.Compare(shortTimePattern[pos], "h", true) == 0)
+                        {
+                            if (skip)
+                            {
+                                Skip |= DateTimeSkips.Hour;
+                            }
+                            else
+                            {
+                                hour = int.Parse(values[3 + pos]);
+                            }
+                        }
+                        else if (string.Compare(shortTimePattern[pos], "mm", true) == 0)
+                        {
+                            if (skip)
+                            {
+                                Skip |= DateTimeSkips.Minute;
+                            }
+                            else
+                            {
+                                min = int.Parse(values[3 + pos]);
+                            }
+                        }
+                        else if (string.Compare(shortTimePattern[pos], "ss", true) == 0)
+                        {
+                            if (skip)
+                            {
+                                Skip |= DateTimeSkips.Second;
+                            }
+                            else
+                            {
+                                sec = int.Parse(values[3 + pos]);
+                            }
+                        }
+                        else
+                        {
+                            throw new ArgumentOutOfRangeException("Invalid Date time pattern.");
+                        }
+                    }
+                }
+                DateTime dt = new DateTime(year, month, day, hour, min, sec);
+                Value = new DateTimeOffset(dt, TimeZoneInfo.Local.GetUtcOffset(dt));
+                if (dt.IsDaylightSavingTime())
+                {
+                    Status |= ClockStatus.DaylightSavingActive;
+                }
             }
         }
 
@@ -86,6 +220,10 @@ namespace Gurux.DLMS
         public GXDateTime(DateTimeOffset value)
         {
             Value = value;
+            if (value.DateTime.IsDaylightSavingTime())
+            {
+                Status |= ClockStatus.DaylightSavingActive;
+            }
         }
 
         /// <summary>
@@ -95,7 +233,12 @@ namespace Gurux.DLMS
         /// <returns></returns>
         public static implicit operator GXDateTime(DateTime value)
         {
-            return new GXDateTime(value);
+            GXDateTime dt = new GXDateTime(value);
+            if (value.IsDaylightSavingTime())
+            {
+                dt.Status |= ClockStatus.DaylightSavingActive;
+            }
+            return dt;
         }
 
         /// <summary>
@@ -157,6 +300,10 @@ namespace Gurux.DLMS
             try
             {
                 Value = new DateTime(year, month, day, hour, minute, second, millisecond, DateTimeKind.Local);
+                if (Value.DateTime.IsDaylightSavingTime())
+                {
+                    Status |= ClockStatus.DaylightSavingActive;
+                }
             }
             catch
             {
@@ -176,6 +323,7 @@ namespace Gurux.DLMS
         /// <summary>
         /// Skip selected date time fields.
         /// </summary>
+        [DefaultValue(DateTimeSkips.None)]
         public DateTimeSkips Skip
         {
             get;
@@ -185,6 +333,7 @@ namespace Gurux.DLMS
         /// <summary>
         /// Daylight savings begin.
         /// </summary>
+        [DefaultValue(false)]
         public bool DaylightSavingsBegin
         {
             get;
@@ -194,6 +343,7 @@ namespace Gurux.DLMS
         /// <summary>
         /// Daylight savings end.
         /// </summary>
+        [DefaultValue(false)]
         public bool DaylightSavingsEnd
         {
             get;
@@ -203,41 +353,122 @@ namespace Gurux.DLMS
         /// <summary>
         /// Status of the clock.
         /// </summary>
+        [DefaultValue(ClockStatus.Ok)]
         public ClockStatus Status
         {
             get;
             set;
         }
 
-        /// <summary>
-        /// Deviation.
-        /// </summary>
-        public int Deviation
+        public string ToFormatString()
         {
-            get;
-            set;
+            int pos;
+            if (Skip != DateTimeSkips.None)
+            {
+                System.Globalization.CultureInfo culture = System.Globalization.CultureInfo.CurrentUICulture;
+#if !WINDOWS_UWP
+                string dateSeparator = culture.DateTimeFormat.DateSeparator, timeSeparator = culture.DateTimeFormat.TimeSeparator;
+                List<string> shortDatePattern = new List<string>(culture.DateTimeFormat.ShortDatePattern.Split(new string[] { dateSeparator }, StringSplitOptions.RemoveEmptyEntries));
+#else
+                //In UWP Standard Date and Time Format Strings are used.
+                string dateSeparator = Internal.GXCommon.GetDateSeparator(), timeSeparator = Internal.GXCommon.GetTimeSeparator();
+                List<string> shortDatePattern = new List<string>("yyyy-MM-dd".Split(new string[] { dateSeparator }, StringSplitOptions.RemoveEmptyEntries));
+#endif
+                List<string> shortTimePattern = new List<string>(culture.DateTimeFormat.LongTimePattern.Split(new string[] { timeSeparator }, StringSplitOptions.RemoveEmptyEntries));
+                if (this is GXTime)
+                {
+                    shortDatePattern.Clear();
+                }
+                else
+                {
+                    if ((Skip & DateTimeSkips.Year) != 0)
+                    {
+                        pos = shortDatePattern.IndexOf("yyyy");
+                        shortDatePattern[pos] = "*";
+                    }
+                    if ((Skip & DateTimeSkips.Month) != 0)
+                    {
+                        pos = shortDatePattern.IndexOf("M");
+                        shortDatePattern[pos] = "*";
+                    }
+                    if ((Skip & DateTimeSkips.Day) != 0)
+                    {
+                        pos = shortDatePattern.IndexOf("d");
+                        shortDatePattern[pos] = "*";
+                    }
+                }
+                if (this is GXDate)
+                {
+                    shortTimePattern.Clear();
+                }
+                else
+                {
+                    if ((Skip & DateTimeSkips.Hour) != 0)
+                    {
+                        pos = shortTimePattern.IndexOf("h");
+                        if (pos == -1)
+                        {
+                            pos = shortTimePattern.IndexOf("H");
+                        }
+                        shortTimePattern[pos] = "*";
+                    }
+                    if ((Skip & DateTimeSkips.Minute) != 0)
+                    {
+                        pos = shortTimePattern.IndexOf("mm");
+                        shortTimePattern[pos] = "*";
+                    }
+                    if ((Skip & DateTimeSkips.Second) != 0 ||
+                        (shortTimePattern.Count == 1 && Value.Second == 0))
+                    {
+                        pos = shortTimePattern.IndexOf("ss");
+                        shortTimePattern[pos] = "*";
+                    }
+                }
+                string format = null;
+                if (shortDatePattern.Count != 0)
+                {
+                    format = string.Join(dateSeparator, shortDatePattern.ToArray());
+                }
+                if (shortTimePattern.Count != 0)
+                {
+                    if (format != null)
+                    {
+                        format += " ";
+                    }
+                    format += string.Join(timeSeparator, shortTimePattern.ToArray());
+                }
+                if (format == "H")
+                {
+                    return Value.Hour.ToString();
+                }
+                if (format == null)
+                {
+                    return "";
+                }
+                return Value.LocalDateTime.ToString(format);
+            }
+            return Value.LocalDateTime.ToString();
         }
 
         /// <summary>
-        /// Is data time serialized as octet string. Default value is false.
+        /// Date time to string.
         /// </summary>
-        ///<remarks>
-        ///Meters are serializing date, time and date time usually as octet string.
-        ///Some meters want to serialize date, time and date time using own data structure.
-        ///</remarks>
-        public bool SerializeUsingOwnType
-        {
-            get;
-            set;
-        }  
-
+        /// <returns>Date time as a string.</returns>
         public override string ToString()
         {
             if (Skip != DateTimeSkips.None)
             {
                 System.Globalization.CultureInfo culture = System.Globalization.CultureInfo.CurrentUICulture;
-                List<string> shortDatePattern = new List<string>(culture.DateTimeFormat.ShortDatePattern.Split(new string[] { culture.DateTimeFormat.DateSeparator }, StringSplitOptions.RemoveEmptyEntries));
-                List<string> shortTimePattern = new List<string>(culture.DateTimeFormat.LongTimePattern.Split(new string[] { culture.DateTimeFormat.TimeSeparator }, StringSplitOptions.RemoveEmptyEntries));
+                //System.Globalization.CultureInfo culture = System.Globalization.CultureInfo.CurrentCulture;
+#if !WINDOWS_UWP
+                string dateSeparator = culture.DateTimeFormat.DateSeparator, timeSeparator = culture.DateTimeFormat.TimeSeparator;
+                List<string> shortDatePattern = new List<string>(culture.DateTimeFormat.ShortDatePattern.Split(new string[] { dateSeparator }, StringSplitOptions.RemoveEmptyEntries));
+#else
+                //In UWP Standard Date and Time Format Strings are used.
+                string dateSeparator = Internal.GXCommon.GetDateSeparator(), timeSeparator = Internal.GXCommon.GetTimeSeparator();
+                List<string> shortDatePattern = new List<string>("yyyy-MM-dd".Split(new string[] { dateSeparator }, StringSplitOptions.RemoveEmptyEntries));
+#endif
+                List<string> shortTimePattern = new List<string>(culture.DateTimeFormat.LongTimePattern.Split(new string[] { timeSeparator }, StringSplitOptions.RemoveEmptyEntries));
                 if ((Skip & DateTimeSkips.Year) != 0)
                 {
                     shortDatePattern.Remove("yyyy");
@@ -266,7 +497,7 @@ namespace Gurux.DLMS
                 string format = null;
                 if (shortDatePattern.Count != 0)
                 {
-                    format = string.Join(culture.DateTimeFormat.DateSeparator, shortDatePattern.ToArray());
+                    format = string.Join(dateSeparator, shortDatePattern.ToArray());
                 }
                 if (shortTimePattern.Count != 0)
                 {
@@ -274,7 +505,7 @@ namespace Gurux.DLMS
                     {
                         format += " ";
                     }
-                    format += string.Join(culture.DateTimeFormat.TimeSeparator, shortTimePattern.ToArray());
+                    format += string.Join(timeSeparator, shortTimePattern.ToArray());
                 }
                 if (format == "H")
                 {
@@ -285,20 +516,129 @@ namespace Gurux.DLMS
                     return "";
                 }
                 //return Value.LocalDateTime.ToString(format);
-                //string myLocalValueIn = Value.LocalDateTime.ToString(format);
-                format = System.Globalization.CultureInfo.CurrentCulture.DateTimeFormat.ShortDatePattern + " " + System.Globalization.CultureInfo.CurrentCulture.DateTimeFormat.ShortTimePattern;
-                string myLocalValueIn = Value.LocalDateTime.ToString(format);
-                myValueListInIF.Add(myLocalValueIn);
-                return myLocalValueIn;
+
+                format = System.Globalization.CultureInfo.CurrentCulture.DateTimeFormat.ShortDatePattern + " " + System.Globalization.CultureInfo.CurrentCulture.DateTimeFormat.LongTimePattern;
+                return Value.LocalDateTime.ToString(format);
             }
-            //return Value.LocalDateTime.ToString();
-            string myLocalValueOut = Value.LocalDateTime.ToString();
-            myValueListOutIF.Add(myLocalValueOut);
-            return myLocalValueOut;
+            return Value.LocalDateTime.ToString();
         }
 
-        static List<string> myValueListInIF = new List<string>();
-        static List<string> myValueListOutIF = new List<string>();
+        /// <summary>
+        /// Get difference between given time and run time in ms.
+        /// </summary>
+        /// <param name="start">Start date time.</param>
+        /// <param name="to">Compared time.</param>
+        /// <returns>Difference in milliseconds.</returns>
+        public static long GetDifference(DateTime start, GXDateTime to)
+        {
+            long diff = 0;
+            //Compare ms.
+            if ((to.Skip & DateTimeSkips.Ms) == 0)
+            {
+                if (start.Millisecond < to.Value.Millisecond)
+                {
+                    diff = to.Value.Millisecond;
+                }
+                else
+                {
+                    diff = -to.Value.Millisecond;
+                }
+            }
+            //Compare seconds.
+            if ((to.Skip & DateTimeSkips.Second) == 0)
+            {
+                if (start.Second < to.Value.Second)
+                {
+                    diff += (to.Value.Second - start.Second) * 1000L;
+                }
+                else
+                {
+                    diff -= (start.Second - to.Value.Second) * 1000L;
+                }
+            }
+            else if (diff < 0)
+            {
+                diff = 60000 + diff;
+            }
+            //Compare minutes.
+            if ((to.Skip & DateTimeSkips.Minute) == 0)
+            {
+                if (start.Minute < to.Value.Minute)
+                {
+                    diff += (to.Value.Minute - start.Minute) * 60000L;
+                }
+                else
+                {
+                    diff -= (start.Minute - to.Value.Minute) * 60000L;
+                }
+            }
+            else if (diff < 0)
+            {
+                diff = 60 * 60000 + diff;
+            }
+            //Compare hours.
+            if ((to.Skip & DateTimeSkips.Hour) == 0)
+            {
+                if (start.Hour < to.Value.Hour)
+                {
+                    diff += (to.Value.Hour - start.Hour) * 60 * 60000L;
+                }
+                else
+                {
+                    diff -= (start.Hour - to.Value.Hour) * 60 * 60000L;
+                }
+            }
+            else if (diff < 0)
+            {
+                diff = 60 * 60000 + diff;
+            }
+            //Compare days.
+            if ((to.Skip & DateTimeSkips.Day) == 0)
+            {
+                if (start.Day < to.Value.Day)
+                {
+                    diff += (to.Value.Day - start.Day) * 24 * 60 * 60000;
+                }
+                else if (start.Day != to.Value.Day)
+                {
+                    if ((to.Skip & DateTimeSkips.Month) == 0)
+                    {
+                        diff += (to.Value.Day - start.Day) * 24 * 60 * 60000L;
+                    }
+                    else
+                    {
+                        diff = ((DateTime.DaysInMonth(start.Year, start.Month) - start.Day + to.Value.Day) * 24 * 60 * 60000L) + diff;
+                    }
+                }
+            }
+            else if (diff < 0)
+            {
+                diff = 24 * 60 * 60000 + diff;
+            }
+            //Compare months.
+            if ((to.Skip & DateTimeSkips.Month) == 0)
+            {
+                if (start.Month < to.Value.Month)
+                {
+                    for (int m = start.Month; m != to.Value.Month; ++m)
+                    {
+                        diff += DateTime.DaysInMonth(start.Year, m) * 24 * 60 * 60000L;
+                    }
+                }
+                else
+                {
+                    for (int m = to.Value.Month; m != start.Month; ++m)
+                    {
+                        diff += -DateTime.DaysInMonth(start.Year, m) * 24 * 60 * 60000L;
+                    }
+                }
+            }
+            else if (diff < 0)
+            {
+                diff = DateTime.DaysInMonth(start.Year, start.Month) * 24 * 60 * 60000L + diff;
+            }
+            return diff;
+        }
 
         #region IConvertible Members
 

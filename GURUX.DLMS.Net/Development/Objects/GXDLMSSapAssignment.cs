@@ -41,6 +41,7 @@ using System.Xml.Serialization;
 using Gurux.DLMS.ManufacturerSettings;
 using Gurux.DLMS.Internal;
 using Gurux.DLMS.Enums;
+using System.Xml;
 
 namespace Gurux.DLMS.Objects
 {
@@ -52,7 +53,7 @@ namespace Gurux.DLMS.Objects
         public GXDLMSSapAssignment()
         : base(ObjectType.SapAssignment, "0.0.41.0.0.255", 0)
         {
-            SapAssignmentList = new List<KeyValuePair<UInt16, string>>();
+            SapAssignmentList = new List<KeyValuePair<ushort, string>>();
         }
 
         /// <summary>
@@ -62,7 +63,7 @@ namespace Gurux.DLMS.Objects
         public GXDLMSSapAssignment(string ln)
         : base(ObjectType.SapAssignment, ln, 0)
         {
-            SapAssignmentList = new List<KeyValuePair<UInt16, string>>();
+            SapAssignmentList = new List<KeyValuePair<ushort, string>>();
         }
 
         /// <summary>
@@ -73,11 +74,11 @@ namespace Gurux.DLMS.Objects
         public GXDLMSSapAssignment(string ln, ushort sn)
         : base(ObjectType.SapAssignment, ln, sn)
         {
-            SapAssignmentList = new List<KeyValuePair<UInt16, string>>();
+            SapAssignmentList = new List<KeyValuePair<ushort, string>>();
         }
 
         [XmlIgnore()]
-        public List<KeyValuePair<UInt16, string>> SapAssignmentList
+        public List<KeyValuePair<ushort, string>> SapAssignmentList
         {
             get;
             set;
@@ -110,7 +111,7 @@ namespace Gurux.DLMS.Objects
         /// <inheritdoc cref="IGXDLMSBase.GetNames"/>
         string[] IGXDLMSBase.GetNames()
         {
-            return new string[] { Gurux.DLMS.Properties.Resources.LogicalNameTxt, "Sap Assignment List" };
+            return new string[] { Internal.GXCommon.GetLogicalNameString(), "Sap Assignment List" };
         }
 
         int IGXDLMSBase.GetAttributeCount()
@@ -141,7 +142,7 @@ namespace Gurux.DLMS.Objects
         {
             if (e.Index == 1)
             {
-                return this.LogicalName;
+                return GXCommon.LogicalNameToBytes(LogicalName);
             }
             if (e.Index == 2)
             {
@@ -174,32 +175,25 @@ namespace Gurux.DLMS.Objects
         {
             if (e.Index == 1)
             {
-                if (e.Value is string)
-                {
-                    LogicalName = e.Value.ToString();
-                }
-                else
-                {
-                    LogicalName = GXDLMSClient.ChangeType((byte[])e.Value, DataType.OctetString).ToString();
-                }
+                LogicalName = GXCommon.ToLogicalName(e.Value);
             }
             else if (e.Index == 2)
             {
                 SapAssignmentList.Clear();
                 if (e.Value != null)
                 {
-                    foreach (Object[] item in (Object[])e.Value)
+                    foreach (object[] item in (object[])e.Value)
                     {
                         string str;
                         if (item[1] is byte[])
                         {
-                            str = GXDLMSClient.ChangeType((byte[])item[1], DataType.String).ToString();
+                            str = GXDLMSClient.ChangeType((byte[])item[1], DataType.String, settings.UseUtc2NormalTime).ToString();
                         }
                         else
                         {
                             str = Convert.ToString(item[1]);
                         }
-                        SapAssignmentList.Add(new KeyValuePair<UInt16, string>(Convert.ToUInt16(item[0]), str));
+                        SapAssignmentList.Add(new KeyValuePair<ushort, string>(Convert.ToUInt16(item[0]), str));
                     }
                 }
             }
@@ -213,6 +207,42 @@ namespace Gurux.DLMS.Objects
         {
             e.Error = ErrorCode.ReadWriteDenied;
             return null;
+        }
+
+        void IGXDLMSBase.Load(GXXmlReader reader)
+        {
+            SapAssignmentList.Clear();
+            if (reader.IsStartElement("SapAssignmentList", true))
+            {
+                while (reader.IsStartElement("Item", true))
+                {
+                    ushort sap = (ushort)reader.ReadElementContentAsInt("SAP");
+                    string ldn = reader.ReadElementContentAsString("LDN");
+                    SapAssignmentList.Add(new KeyValuePair<ushort, string>(sap, ldn));
+                }
+                reader.ReadEndElement("SapAssignmentList");
+            }
+        }
+
+        void IGXDLMSBase.Save(GXXmlWriter writer)
+        {
+            if (SapAssignmentList != null)
+            {
+                writer.WriteStartElement("SapAssignmentList");
+                foreach (KeyValuePair<ushort, string> it in SapAssignmentList)
+                {
+                    writer.WriteStartElement("Item");
+                    writer.WriteElementString("SAP", it.Key);
+                    writer.WriteElementString("LDN", it.Value);
+                    writer.WriteEndElement();
+                }
+                writer.WriteEndElement();
+            }
+
+        }
+
+        void IGXDLMSBase.PostLoad(GXXmlReader reader)
+        {
         }
 
         #endregion

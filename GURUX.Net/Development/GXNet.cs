@@ -58,7 +58,7 @@ namespace Gurux.Net
     Thread m_ReceiverThread;
 #endif
 
-        bool isVirtual, isVirtualOpen, isClone;
+        bool isVirtual, isVirtualOpen;
         // Define a timeout in milliseconds for each asynchronous call. If a response is not received within this
         // timeout period, the call is aborted.
         const int TIMEOUT_MILLISECONDS = 5000;
@@ -140,29 +140,50 @@ namespace Gurux.Net
         }
 
         /// <summary>
-        /// Make clone from Network component.
+        /// Attach TCP/IP connection.
         /// </summary>
         /// <remarks>
         /// This can be used in server side if server
         /// want to start communicating with client using syncronous communication.
-        /// Clone do not close connection.
+        /// Close connection after use.
         /// </remarks>
-        public GXNet Clone()
+        public GXNet Attach(string address)
         {
+            if (Protocol != NetworkType.Tcp)
+            {
+                throw new ArgumentException("Attach can be used only with TCP/IP connection.");
+            }
             GXNet net = new GXNet();
-            net.isServer = isServer;
-            net.syncBase = new GXSynchronousMediaBase(1024);
             net.ConfigurableSettings = ConfigurableSettings;
             net.Protocol = Protocol;
-            net.isServer = isServer;
-            net.hostAddress = hostAddress;
-            net.port = port;
-            net.socket = socket;
             net.Trace = Trace;
-            net.tcpIpClients = tcpIpClients;
-            net.isClone = true;
+            lock (tcpIpClients)
+            {
+                foreach (var it in tcpIpClients)
+                {
+                    if (it.Key is Socket s)
+                    {
+                        if (s.RemoteEndPoint.ToString() == address)
+                        {
+                            net.socket = s;
+                            s.RemoteEndPoint.ToString();
+                            net.hostAddress = hostAddress;
+                            net.port = port;
+                            tcpIpClients.Remove(s);
+                            s.BeginReceive(net.receiveBuffer, 0, net.receiveBuffer.Length,
+                                                              SocketFlags.None, new AsyncCallback(net.RecieveComplete), s);
+                            break;
+                        }
+                    }
+                }
+            }
+            if (net.socket == null)
+            {
+                throw new ArgumentException("Unknown address.");
+            }
             return net;
         }
+
 
         /// <summary>
         /// Destructor.
@@ -200,18 +221,12 @@ namespace Gurux.Net
         }
         private void NotifyPropertyChanged(string info)
         {
-            if (m_OnPropertyChanged != null)
-            {
-                m_OnPropertyChanged(this, new PropertyChangedEventArgs(info));
-            }
+            m_OnPropertyChanged?.Invoke(this, new PropertyChangedEventArgs(info));
         }
 
         void NotifyError(Exception ex)
         {
-            if (m_OnError != null)
-            {
-                m_OnError(this, ex);
-            }
+            m_OnError?.Invoke(this, ex);
             if (Trace >= TraceLevel.Error && m_OnTrace != null)
             {
                 m_OnTrace(this, new TraceEventArgs(TraceTypes.Error, ex, null));
@@ -407,13 +422,16 @@ namespace Gurux.Net
                 if (this.Protocol == NetworkType.Tcp)
                 {
                     Socket client = null;
-                    foreach (var it in tcpIpClients)
+                    lock (tcpIpClients)
                     {
-                        Socket s = (Socket)it.Key;
-                        if (s.RemoteEndPoint.ToString() == receiver)
+                        foreach (var it in tcpIpClients)
                         {
-                            client = s;
-                            break;
+                            Socket s = (Socket)it.Key;
+                            if (s.RemoteEndPoint.ToString() == receiver)
+                            {
+                                client = s;
+                                break;
+                            }
                         }
                     }
                     if (client == null)
@@ -425,11 +443,11 @@ namespace Gurux.Net
                 else
                 {
                     int pos = receiver.LastIndexOf(':');
-                    string[] tmp = new string[2];
-                    if (pos == -1)
+                    if (pos != 2)
                     {
-
+                        throw new ArgumentException("Invalid sender info.");
                     }
+                    string[] tmp = new string[2];
                     tmp[0] = receiver.Substring(0, pos);
                     tmp[1] = receiver.Substring(pos + 1);
                     IPAddress address = IPAddress.Parse(tmp[0]);
@@ -447,10 +465,7 @@ namespace Gurux.Net
             {
                 m_OnTrace(this, new TraceEventArgs(TraceTypes.Info, state, null));
             }
-            if (m_OnMediaStateChange != null)
-            {
-                m_OnMediaStateChange(this, new MediaStateEventArgs(state));
-            }
+            m_OnMediaStateChange?.Invoke(this, new MediaStateEventArgs(state));
         }
 
 #if !WINDOWS_PHONE
@@ -483,8 +498,7 @@ namespace Gurux.Net
                     if (socket.Connected)
                     {
                         sender = socket.RemoteEndPoint.ToString();
-                        SocketError err;
-                        bytes = socket.EndReceive(result, out err);
+                        bytes = socket.EndReceive(result, out SocketError err);
                         //If connection is not closed and error is occurred.
                         if (err != SocketError.Success)
                         {
@@ -504,13 +518,16 @@ namespace Gurux.Net
                         {
                             if (this.Server)
                             {
-                                if (tcpIpClients.ContainsKey(socket))
+                                lock (tcpIpClients)
                                 {
-                                    buff = tcpIpClients[socket];
-                                }
-                                else
-                                {
-                                    bytes = 0;
+                                    if (tcpIpClients.ContainsKey(socket))
+                                    {
+                                        buff = tcpIpClients[socket];
+                                    }
+                                    else
+                                    {
+                                        bytes = 0;
+                                    }
                                 }
                             }
                             else
@@ -553,11 +570,11 @@ namespace Gurux.Net
                 {
                     if (Server)
                     {
-                        tcpIpClients.Remove(socket);
-                        if (m_OnClientDisconnected != null)
+                        lock (tcpIpClients)
                         {
-                            m_OnClientDisconnected(this, new ConnectionEventArgs(socket.RemoteEndPoint.ToString()));
+                            tcpIpClients.Remove(socket);
                         }
+                        m_OnClientDisconnected?.Invoke(this, new ConnectionEventArgs(socket.RemoteEndPoint.ToString()));
                     }
                     else
                     {
@@ -667,7 +684,12 @@ namespace Gurux.Net
                 }
                 else
                 {
-                    if (MaxClientCount != 0 && tcpIpClients.Count + 1 > MaxClientCount)
+                    int cnt = 0;
+                    lock (tcpIpClients)
+                    {
+                        cnt = tcpIpClients.Count + 1;
+                    }
+                    if (MaxClientCount != 0 && cnt > MaxClientCount)
                     {
                         Close();
                     }
@@ -677,20 +699,31 @@ namespace Gurux.Net
                         {
                             workerSocket = (socket as Socket).EndAccept(result);
                             ConnectionEventArgs e = new ConnectionEventArgs(workerSocket.RemoteEndPoint.ToString());
+                            lock (tcpIpClients)
+                            {
+                                tcpIpClients[workerSocket] = null;
+                            }
                             if (m_OnClientConnected != null)
                             {
                                 m_OnClientConnected(this, e);
                                 if (!e.Accept)
                                 {
+                                    lock (tcpIpClients)
+                                    {
+                                        tcpIpClients.Remove(workerSocket);
+                                    }
                                     workerSocket.Close();
                                 }
                             }
-                            if (e.Accept)
+                            lock (tcpIpClients)
                             {
-                                byte[] buff = new byte[1024];
-                                tcpIpClients[workerSocket] = buff;
-                                workerSocket.BeginReceive(buff, 0, buff.Length,
-                                                          SocketFlags.None, new AsyncCallback(RecieveComplete), workerSocket);
+                                if (e.Accept && tcpIpClients.ContainsKey(workerSocket))
+                                {
+                                    byte[] buff = new byte[1024];
+                                    tcpIpClients[workerSocket] = buff;
+                                    workerSocket.BeginReceive(buff, 0, buff.Length,
+                                                                SocketFlags.None, new AsyncCallback(RecieveComplete), workerSocket);
+                                }
                             }
                         }
                     }
@@ -705,11 +738,11 @@ namespace Gurux.Net
             {
                 if (workerSocket != null)
                 {
-                    tcpIpClients.Remove(workerSocket);
-                    if (m_OnClientDisconnected != null)
+                    lock (tcpIpClients)
                     {
-                        m_OnClientDisconnected(this, new ConnectionEventArgs(workerSocket.RemoteEndPoint.ToString()));
+                        tcpIpClients.Remove(workerSocket);
                     }
+                    m_OnClientDisconnected?.Invoke(this, new ConnectionEventArgs(workerSocket.RemoteEndPoint.ToString()));
                 }
             }
             catch (Exception ex)
@@ -744,8 +777,7 @@ namespace Gurux.Net
                 AddressFamily family = this.UseIPv6 ? AddressFamily.InterNetworkV6 : AddressFamily.InterNetwork;
                 if (!this.isServer && !isVirtual)
                 {
-                    IPAddress address;
-                    if (IPAddress.TryParse(HostName, out address))
+                    if (IPAddress.TryParse(HostName, out IPAddress address))
                     {
                         switch (address.AddressFamily)
                         {
@@ -937,7 +969,7 @@ namespace Gurux.Net
         /// <inheritdoc cref="IGXMedia.Close"/>
         public void Close()
         {
-            if (!isClone && (socket != null || isVirtualOpen))
+            if (socket != null || isVirtualOpen)
             {
 #if WINDOWS_PHONE
             if (m_Receiver != null)
@@ -950,23 +982,26 @@ namespace Gurux.Net
                 m_Receiver = null;
             }
 #endif
-                foreach (var it in tcpIpClients)
+                lock (tcpIpClients)
                 {
-                    try
+                    foreach (var it in tcpIpClients)
                     {
-                        if (m_OnClientDisconnected != null)
+                        try
                         {
-                            Socket s = (Socket)it.Key;
-                            m_OnClientDisconnected(this, new ConnectionEventArgs(s.RemoteEndPoint.ToString()));
-                            s.Close();
+                            if (m_OnClientDisconnected != null)
+                            {
+                                Socket s = (Socket)it.Key;
+                                m_OnClientDisconnected(this, new ConnectionEventArgs(s.RemoteEndPoint.ToString()));
+                                s.Close();
+                            }
+                        }
+                        catch (Exception)
+                        {
+                            //Skip errors.
                         }
                     }
-                    catch (Exception)
-                    {
-                        //Skip errors.
-                    }
+                    tcpIpClients.Clear();
                 }
-                tcpIpClients.Clear();
                 try
                 {
                     if (isVirtualOpen)
@@ -1018,14 +1053,14 @@ namespace Gurux.Net
         }
 
 #if !__MOBILE__
-    /// <inheritdoc cref="IGXMedia.PropertiesForm"/>
-    public System.Windows.Forms.Form PropertiesForm
-    {
-        get
+        /// <inheritdoc cref="IGXMedia.PropertiesForm"/>
+        public System.Windows.Forms.Form PropertiesForm
         {
-            return new Settings(this);
+            get
+            {
+                return new Settings(this);
+            }
         }
-    }
 #endif
         /// <inheritdoc cref="IGXMedia.IsOpen"/>
         /// <seealso cref="Open">Open</seealso>
@@ -1195,7 +1230,7 @@ namespace Gurux.Net
         /// <seealso cref="BytesReceived">BytesReceived</seealso>
         /// <seealso cref="ResetByteCounters">ResetByteCounters</seealso>
         [Browsable(false)]
-        public UInt64 BytesSent
+        public ulong BytesSent
         {
             get;
             private set;
@@ -1207,7 +1242,7 @@ namespace Gurux.Net
         /// <seealso cref="BytesSent">BytesSent</seealso>
         /// <seealso cref="ResetByteCounters">ResetByteCounters</seealso>
         [Browsable(false)]
-        public UInt64 BytesReceived
+        public ulong BytesReceived
         {
             get;
             private set;
@@ -1240,21 +1275,20 @@ namespace Gurux.Net
         /// </summary>
         public void DisconnectClient(string address)
         {
-            foreach (var it in tcpIpClients)
+            lock (tcpIpClients)
             {
-                if (it.Key is Socket)
+                foreach (var it in tcpIpClients)
                 {
-                    Socket s = (Socket)it.Key;
-                    if (s.RemoteEndPoint.ToString() == address)
+                    if (it.Key is Socket s)
                     {
-                        tcpIpClients.Remove(it.Key);
-                        s.Shutdown(SocketShutdown.Both);
-                        s.Close();
-                        if (m_OnClientDisconnected != null)
+                        if (s.RemoteEndPoint.ToString() == address)
                         {
-                            m_OnClientDisconnected(this, new ConnectionEventArgs(address));
+                            tcpIpClients.Remove(it.Key);
+                            s.Shutdown(SocketShutdown.Both);
+                            s.Close();
+                            m_OnClientDisconnected?.Invoke(this, new ConnectionEventArgs(address));
+                            break;
                         }
-                        break;
                     }
                 }
             }
@@ -1268,11 +1302,14 @@ namespace Gurux.Net
             string[] clients;
             if (Protocol == NetworkType.Tcp)
             {
-                clients = new string[tcpIpClients.Count];
-                int pos = -1;
-                foreach (var it in tcpIpClients)
+                lock (tcpIpClients)
                 {
-                    clients[++pos] = (it.Key as Socket).RemoteEndPoint.ToString();
+                    clients = new string[tcpIpClients.Count];
+                    int pos = -1;
+                    foreach (var it in tcpIpClients)
+                    {
+                        clients[++pos] = (it.Key as Socket).RemoteEndPoint.ToString();
+                    }
                 }
             }
             else
@@ -1565,20 +1602,20 @@ namespace Gurux.Net
             }
         }
 #if !__MOBILE__
-    /// <summary>
-    /// Shows the network Properties dialog.
-    /// </summary>
-    /// <param name="parent">Owner window of the Properties dialog.</param>
-    /// <returns>True, if the user has accepted the changes.</returns>
-    /// <seealso cref="Port">Port</seealso>
-    /// <seealso cref="HostName">HostName</seealso>
-    /// <seealso cref="Protocol">Protocol</seealso>
-    /// <seealso cref="Server">Server</seealso>
-    /// <seealso href="PropertiesDialog.html">Properties Dialog</seealso>
-    public bool Properties(System.Windows.Forms.Form parent)
-    {
-        return new Gurux.Shared.PropertiesForm(PropertiesForm, Resources.SettingsTxt, IsOpen).ShowDialog(parent) == System.Windows.Forms.DialogResult.OK;
-    }
+        /// <summary>
+        /// Shows the network Properties dialog.
+        /// </summary>
+        /// <param name="parent">Owner window of the Properties dialog.</param>
+        /// <returns>True, if the user has accepted the changes.</returns>
+        /// <seealso cref="Port">Port</seealso>
+        /// <seealso cref="HostName">HostName</seealso>
+        /// <seealso cref="Protocol">Protocol</seealso>
+        /// <seealso cref="Server">Server</seealso>
+        /// <seealso href="PropertiesDialog.html">Properties Dialog</seealso>
+        public bool Properties(System.Windows.Forms.Form parent)
+        {
+            return new Gurux.Shared.PropertiesForm(PropertiesForm, Resources.SettingsTxt, IsOpen).ShowDialog(parent) == System.Windows.Forms.DialogResult.OK;
+        }
 #endif
         /// <inheritdoc cref="IGXMedia.Synchronous"/>
         public object Synchronous

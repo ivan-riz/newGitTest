@@ -71,11 +71,36 @@
     <Reference Include="System.Xml" />
   </ItemGroup>
   <ItemGroup>
+    <Compile Include="GXDLMSConfirmedServiceError.cs" />
+    <Compile Include="Objects\Enums\GsmPacketSwitchStatus.cs" />
+    <Compile Include="Objects\Enums\GsmCircuitSwitchStatus.cs" />
+    <Compile Include="Objects\Enums\GsmStatus.cs" />
+    <Compile Include="Objects\Enums\DeviceType.cs" />
+    <Compile Include="Objects\Enums\GainResolution.cs" />
+    <Compile Include="Objects\Enums\Modulation.cs" />
+    <Compile Include="Objects\Enums\AddressConfigMode.cs" />
     <Compile Include="Objects\Enums\MBusEncryptionKeyStatus.cs" />
+    <Compile Include="Objects\Enums\SecurityPolicy0.cs" />
+    <Compile Include="Objects\GXDLMSBroadcastLogTable.cs" />
+    <Compile Include="Objects\GXDLMSGSMCellInfo.cs" />
+    <Compile Include="Objects\GXDLMSGSMDiagnostic.cs" />
+    <Compile Include="Objects\GXDLMSMBusMasterPortSetup.cs" />
+    <Compile Include="Objects\GXXmlWriterSettings.cs" />
+    <Compile Include="Objects\GXXmlWriter.cs" />
+    <Compile Include="Objects\GXXmlReader.cs" />
+    <Compile Include="Objects\GXDLMSContextInformationTable.cs" />
+    <Compile Include="Objects\GXDLMSG3PlcMacLayerCounters.cs" />
+    <Compile Include="Objects\GXDLMSRoutingTable.cs" />
+    <Compile Include="Objects\GXDLMSRoutingConfiguration.cs" />
+    <Compile Include="Objects\GXDLMSNeighbourTable.cs" />
+    <Compile Include="Objects\GXDLMSG3Plc6LoWPan.cs" />
+    <Compile Include="Objects\GXDLMSG3PlcMacSetup.cs" />
+    <Compile Include="Objects\GXNeighborDiscoverySetup.cs" />
     <Compile Include="Objects\GXDLMSIEC14908Diagnostic.cs" />
     <Compile Include="Objects\GXDLMSIEC14908PhysicalStatus.cs" />
     <Compile Include="Objects\GXDLMSIEC14908PhysicalSetup.cs" />
     <Compile Include="Objects\GXDLMSIEC14908Identification.cs" />
+    <Compile Include="Objects\GXDLMSIp6Setup.cs" />
     <Compile Include="Objects\GXDLMSSFSKMacCounters.cs" />
     <Compile Include="Objects\GXDLMSSFSKMacSynchronizationTimeouts.cs" />
     <Compile Include="Objects\GXDLMSSFSKActiveInitiator.cs" />
@@ -115,7 +140,6 @@
     <Compile Include="Enums\ServiceError.cs" />
     <Compile Include="GXDLMSConnectionEventArgs.cs" />
     <Compile Include="GXDLMSLongTransaction.cs" />
-    <Compile Include="Enums\UpdateType.cs" />
     <Compile Include="GXDLMSBuilder.cs" />
     <Compile Include="GXDLMSConverter.cs" />
     <Compile Include="Internal\ActionRequestType.cs" />
@@ -186,7 +210,6 @@
     <Compile Include="GXDLMS.cs" />
     <Compile Include="GXDLMSException.cs" />
     <Compile Include="GXDLMSLimits.cs" />
-    <Compile Include="GXDLMSLNSettings.cs" />
     <Compile Include="Internal\GXDLMSLimitsDefault.cs" />
     <Compile Include="Internal\HDLCInfo.cs" />
     <Compile Include="Objects\Enums\AddressState.cs" />
@@ -212,9 +235,7 @@
     <Compile Include="Objects\Enums\Ip4SetupIpOptionType.cs" />
     <Compile Include="Objects\GXDLMSLimiter.cs" />
     <Compile Include="Objects\GXDLMSMBusClient.cs" />
-    <Compile Include="Objects\GXDLMSMBusMasterPortSetup.cs" />
     <Compile Include="Objects\GXDLMSMBusSlavePortSetup.cs" />
-    <Compile Include="Objects\GXDLMSMessageHandler.cs" />
     <Compile Include="Objects\GXDLMSModemInitialisation.cs" />
     <Compile Include="Objects\GXDLMSMonitoredValue.cs" />
     <Compile Include="Objects\GXDLMSObject.cs" />
@@ -224,7 +245,6 @@
     <Compile Include="Objects\GXDLMSAutoAnswer.cs" />
     <Compile Include="Objects\GXDLMSDemandRegister.cs" />
     <Compile Include="Objects\GXDLMSObjectCollection.cs" />
-    <Compile Include="GXDLMSSNSettings.cs" />
     <Compile Include="Internal\GXFCS16.cs" />
     <Compile Include="Enums\InterfaceType.cs" />
     <Compile Include="ManufacturerSettings\GXAttribute.cs" />

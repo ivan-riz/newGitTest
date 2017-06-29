@@ -41,13 +41,13 @@ namespace Gurux.DLMS.Objects
 {
     public class GXDLMSSpecialDay
     {
-        public UInt16 Index
+        public ushort Index
         {
             get;
             set;
         }
 
-        public GXDateTime Date
+        public GXDate Date
         {
             get;
             set;

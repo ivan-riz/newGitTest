@@ -42,6 +42,7 @@ using Gurux.DLMS.Internal;
 using Gurux.DLMS.Secure;
 using Gurux.DLMS.Enums;
 using Gurux.DLMS.Objects.Enums;
+using System.Xml;
 
 namespace Gurux.DLMS.Objects
 {
@@ -53,13 +54,6 @@ namespace Gurux.DLMS.Objects
         public GXDLMSAssociationLogicalName()
         : this("0.0.40.0.0.255")
         {
-            ObjectList = new GXDLMSObjectCollection();
-            ApplicationContextName = new GXApplicationContextName();
-            XDLMSContextInfo = new GXxDLMSContextType();
-            AuthenticationMechanismMame = new GXAuthenticationMechanismName();
-            //Default shared secreds.
-            Secret = ASCIIEncoding.ASCII.GetBytes("Gurux");
-            HlsSecret = ASCIIEncoding.ASCII.GetBytes("Gurux");
         }
 
         /// <summary>
@@ -69,13 +63,11 @@ namespace Gurux.DLMS.Objects
         public GXDLMSAssociationLogicalName(string ln)
         : base(ObjectType.AssociationLogicalName, ln, 0)
         {
+            Version = 3;
             ObjectList = new GXDLMSObjectCollection();
             ApplicationContextName = new GXApplicationContextName();
             XDLMSContextInfo = new GXxDLMSContextType();
-            AuthenticationMechanismMame = new GXAuthenticationMechanismName();
-            //Default shared secred.
-            Secret = ASCIIEncoding.ASCII.GetBytes("Gurux");
-            HlsSecret = ASCIIEncoding.ASCII.GetBytes("Gurux");
+            AuthenticationMechanismName = new GXAuthenticationMechanismName();
         }
 
         [XmlIgnore()]
@@ -101,7 +93,7 @@ namespace Gurux.DLMS.Objects
         /// devices hosting these APs, which belong to the AA modelled by the Association LN object.
         /// </summary>
         [XmlIgnore()]
-        public UInt16 ServerSAP
+        public ushort ServerSAP
         {
             get;
             set;
@@ -123,7 +115,7 @@ namespace Gurux.DLMS.Objects
 
 
         [XmlIgnore()]
-        public GXAuthenticationMechanismName AuthenticationMechanismMame
+        public GXAuthenticationMechanismName AuthenticationMechanismName
         {
             get;
             set;
@@ -167,7 +159,7 @@ namespace Gurux.DLMS.Objects
         public override object[] GetValues()
         {
             return new object[] { LogicalName, ObjectList, ClientSAP + "/" + ServerSAP, ApplicationContextName,
-                              XDLMSContextInfo, AuthenticationMechanismMame, Secret, AssociationStatus, SecuritySetupReference
+                              XDLMSContextInfo, AuthenticationMechanismName, Secret, AssociationStatus, SecuritySetupReference
                             };
         }
 
@@ -178,7 +170,7 @@ namespace Gurux.DLMS.Objects
             //Check reply_to_HLS_authentication
             if (e.Index == 1)
             {
-                UInt32 ic = 0;
+                uint ic = 0;
                 byte[] secret;
                 if (settings.Authentication == Authentication.HighGMAC)
                 {
@@ -198,7 +190,7 @@ namespace Gurux.DLMS.Objects
                     if (settings.Authentication == Authentication.HighGMAC)
                     {
                         secret = settings.Cipher.SystemTitle;
-                        ic = settings.Cipher.FrameCounter;
+                        ic = settings.Cipher.InvocationCounter;
                     }
                     else
                     {
@@ -281,7 +273,7 @@ namespace Gurux.DLMS.Objects
         {
             if (Version == 0)
             {
-                return new string[] {Gurux.DLMS.Properties.Resources.LogicalNameTxt,
+                return new string[] {Internal.GXCommon.GetLogicalNameString(),
                                  "Object List",
                                  "Aassociated_partners_id",
                                  "Application Context Name",
@@ -291,7 +283,7 @@ namespace Gurux.DLMS.Objects
                                  "Association Status"
                                 };
             }
-            return new string[] {Gurux.DLMS.Properties.Resources.LogicalNameTxt,
+            return new string[] {Internal.GXCommon.GetLogicalNameString(),
                              "Object List",
                              "Aassociated_partners_id",
                              "Application Context Name",
@@ -325,7 +317,7 @@ namespace Gurux.DLMS.Objects
             //Add count only for first time.
             if (settings.Index == 0)
             {
-                settings.Count = (UInt16)ObjectList.Count;
+                settings.Count = (ushort)ObjectList.Count;
                 data.SetUInt8((byte)DataType.Array);
                 GXCommon.SetObjectCount(ObjectList.Count, data);
             }
@@ -339,84 +331,99 @@ namespace Gurux.DLMS.Objects
                     data.SetUInt8((byte)4); //Count
                     GXCommon.SetData(settings, data, DataType.UInt16, it.ObjectType); //ClassID
                     GXCommon.SetData(settings, data, DataType.UInt8, it.Version); //Version
-                    GXCommon.SetData(settings, data, DataType.OctetString, it.LogicalName); //LN
-                    GetAccessRights(settings, it, data); //Access rights.
+                    //LN
+                    GXCommon.SetData(settings, data, DataType.OctetString, GXCommon.LogicalNameToBytes(it.LogicalName));
+                    GetAccessRights(settings, it, e.Server, data); //Access rights.
                     ++settings.Index;
-                    //If PDU is full.
-                    if (!e.SkipMaxPduSize && data.Size >= settings.MaxPduSize)
+                    if (settings.IsServer)
                     {
-                        break;
+                        //If PDU is full.
+                        if (!e.SkipMaxPduSize && data.Size >= settings.MaxPduSize)
+                        {
+                            break;
+                        }
                     }
                 }
             }
             return data;
         }
 
-        private void GetAccessRights(GXDLMSSettings settings, GXDLMSObject item, GXByteBuffer data)
+        private void GetAccessRights(GXDLMSSettings settings, GXDLMSObject item, GXDLMSServer server, GXByteBuffer data)
         {
             data.SetUInt8((byte)DataType.Structure);
             data.SetUInt8((byte)2);
             data.SetUInt8((byte)DataType.Array);
-            GXAttributeCollection attributes = item.Attributes;
             int cnt = (item as IGXDLMSBase).GetAttributeCount();
             data.SetUInt8((byte)cnt);
+            ValueEventArgs e;
+            if (server != null)
+            {
+                e = new DLMS.ValueEventArgs(server, item, 0, 0, null);
+            }
+            else
+            {
+                e = new DLMS.ValueEventArgs(settings, item, 0, 0, null);
+            }
             for (int pos = 0; pos != cnt; ++pos)
             {
-                GXDLMSAttributeSettings att = attributes.Find(pos + 1);
-                data.SetUInt8((byte)DataType.Structure); //attribute_access_item
-                data.SetUInt8((byte)3);
-                GXCommon.SetData(settings, data, DataType.Int8, pos + 1);
-                //If attribute is not set return read only.
-                if (att == null)
+                e.Index = pos + 1;
+                AccessMode m;
+                if (server != null)
                 {
-                    GXCommon.SetData(settings, data, DataType.Enum, AccessMode.Read);
+                    m = server.NotifyGetAttributeAccess(e);
                 }
                 else
                 {
-                    GXCommon.SetData(settings, data, DataType.Enum, att.Access);
+                    m = AccessMode.ReadWrite;
                 }
+                //attribute_access_item
+                data.SetUInt8((byte)DataType.Structure);
+                data.SetUInt8((byte)3);
+                GXCommon.SetData(settings, data, DataType.Int8, e.Index);
+                GXCommon.SetData(settings, data, DataType.Enum, m);
                 GXCommon.SetData(settings, data, DataType.None, null);
             }
             data.SetUInt8((byte)DataType.Array);
-            attributes = item.MethodAttributes;
             cnt = (item as IGXDLMSBase).GetMethodCount();
             data.SetUInt8((byte)cnt);
             for (int pos = 0; pos != cnt; ++pos)
             {
-                GXDLMSAttributeSettings att = attributes.Find(pos + 1);
-                data.SetUInt8((byte)DataType.Structure); //attribute_access_item
-                data.SetUInt8((byte)2);
-                GXCommon.SetData(settings, data, DataType.Int8, pos + 1);
-                //If method attribute is not set return no access.
-                if (att == null)
+                e.Index = pos + 1;
+                MethodAccessMode m;
+                if (server != null)
                 {
-                    GXCommon.SetData(settings, data, DataType.Enum, MethodAccessMode.NoAccess);
+                    m = server.NotifyGetMethodAccess(e);
                 }
                 else
                 {
-                    GXCommon.SetData(settings, data, DataType.Enum, att.MethodAccess);
+                    m = MethodAccessMode.Access;
                 }
+                //attribute_access_item
+                data.SetUInt8((byte)DataType.Structure);
+                data.SetUInt8((byte)2);
+                GXCommon.SetData(settings, data, DataType.Int8, pos + 1);
+                GXCommon.SetData(settings, data, DataType.Enum, m);
             }
         }
 
-        void UpdateAccessRights(GXDLMSObject obj, Object[] buff)
+        void UpdateAccessRights(GXDLMSObject obj, object[] buff)
         {
             if (buff.Length != 0)
             {
-                foreach (Object[] attributeAccess in (Object[])buff[0])
+                foreach (object[] attributeAccess in (object[])buff[0])
                 {
                     int id = Convert.ToInt32(attributeAccess[0]);
                     int mode = Convert.ToInt32(attributeAccess[1]);
                     obj.SetAccess(id, (AccessMode)mode);
                 }
-                foreach (Object[] methodAccess in (Object[])buff[1])
+                foreach (object[] methodAccess in (object[])buff[1])
                 {
                     int id = Convert.ToInt32(methodAccess[0]);
                     int tmp;
                     //If version is 0.
-                    if (methodAccess[1] is Boolean)
+                    if (methodAccess[1] is bool)
                     {
-                        tmp = ((Boolean)methodAccess[1]) ? 1 : 0;
+                        tmp = ((bool)methodAccess[1]) ? 1 : 0;
                     }
                     else//If version is 1.
                     {
@@ -473,7 +480,7 @@ namespace Gurux.DLMS.Objects
         {
             if (e.Index == 1)
             {
-                return this.LogicalName;
+                return GXCommon.LogicalNameToBytes(LogicalName);
             }
             if (e.Index == 2)
             {
@@ -511,9 +518,11 @@ namespace Gurux.DLMS.Objects
                 GXByteBuffer data = new GXByteBuffer();
                 data.SetUInt8((byte)DataType.Structure);
                 data.SetUInt8(6);
-                GXCommon.SetData(settings, data, DataType.BitString, XDLMSContextInfo.Conformance);
+                GXByteBuffer bb = new GXByteBuffer();
+                bb.SetUInt32((uint)XDLMSContextInfo.Conformance);
+                GXCommon.SetData(settings, data, DataType.BitString, bb.SubArray(1, 3));
                 GXCommon.SetData(settings, data, DataType.UInt16, XDLMSContextInfo.MaxReceivePduSize);
-                GXCommon.SetData(settings, data, DataType.UInt16, XDLMSContextInfo.MaxSendPpuSize);
+                GXCommon.SetData(settings, data, DataType.UInt16, XDLMSContextInfo.MaxSendPduSize);
                 GXCommon.SetData(settings, data, DataType.UInt8, XDLMSContextInfo.DlmsVersionNumber);
                 GXCommon.SetData(settings, data, DataType.Int8, XDLMSContextInfo.QualityOfService);
                 GXCommon.SetData(settings, data, DataType.OctetString, XDLMSContextInfo.CypheringInfo);
@@ -525,13 +534,13 @@ namespace Gurux.DLMS.Objects
                 data.SetUInt8((byte)DataType.Structure);
                 //Add count
                 data.SetUInt8(0x7);
-                GXCommon.SetData(settings, data, DataType.UInt8, AuthenticationMechanismMame.JointIsoCtt);
-                GXCommon.SetData(settings, data, DataType.UInt8, AuthenticationMechanismMame.Country);
-                GXCommon.SetData(settings, data, DataType.UInt16, AuthenticationMechanismMame.CountryName);
-                GXCommon.SetData(settings, data, DataType.UInt8, AuthenticationMechanismMame.IdentifiedOrganization);
-                GXCommon.SetData(settings, data, DataType.UInt8, AuthenticationMechanismMame.DlmsUA);
-                GXCommon.SetData(settings, data, DataType.UInt8, AuthenticationMechanismMame.AuthenticationMechanismName);
-                GXCommon.SetData(settings, data, DataType.UInt8, AuthenticationMechanismMame.MechanismId);
+                GXCommon.SetData(settings, data, DataType.UInt8, AuthenticationMechanismName.JointIsoCtt);
+                GXCommon.SetData(settings, data, DataType.UInt8, AuthenticationMechanismName.Country);
+                GXCommon.SetData(settings, data, DataType.UInt16, AuthenticationMechanismName.CountryName);
+                GXCommon.SetData(settings, data, DataType.UInt8, AuthenticationMechanismName.IdentifiedOrganization);
+                GXCommon.SetData(settings, data, DataType.UInt8, AuthenticationMechanismName.DlmsUA);
+                GXCommon.SetData(settings, data, DataType.UInt8, AuthenticationMechanismName.AuthenticationMechanismName);
+                GXCommon.SetData(settings, data, DataType.UInt8, AuthenticationMechanismName.MechanismId);
                 return data.Array();
             }
             if (e.Index == 7)
@@ -544,11 +553,7 @@ namespace Gurux.DLMS.Objects
             }
             if (e.Index == 9)
             {
-                if (SecuritySetupReference == null)
-                {
-                    return null;
-                }
-                return ASCIIEncoding.ASCII.GetBytes(SecuritySetupReference);
+                return GXCommon.LogicalNameToBytes(SecuritySetupReference);
             }
             e.Error = ErrorCode.ReadWriteDenied;
             return null;
@@ -558,25 +563,18 @@ namespace Gurux.DLMS.Objects
         {
             if (e.Index == 1)
             {
-                if (e.Value is string)
-                {
-                    LogicalName = e.Value.ToString();
-                }
-                else
-                {
-                    LogicalName = GXDLMSClient.ChangeType((byte[])e.Value, DataType.OctetString).ToString();
-                }
+                LogicalName = GXCommon.ToLogicalName(e.Value);
             }
             else if (e.Index == 2)
             {
                 ObjectList.Clear();
                 if (e.Value != null)
                 {
-                    foreach (Object[] item in (Object[])e.Value)
+                    foreach (object[] item in (object[])e.Value)
                     {
                         ObjectType type = (ObjectType)Convert.ToInt32(item[0]);
                         int version = Convert.ToInt32(item[1]);
-                        String ln = GXDLMSObject.ToLogicalName((byte[])item[2]);
+                        string ln = GXCommon.ToLogicalName((byte[])item[2]);
                         GXDLMSObject obj = null;
                         if (settings.Objects != null)
                         {
@@ -591,7 +589,7 @@ namespace Gurux.DLMS.Objects
                         //Unknown objects are not shown.
                         if (obj is IGXDLMSBase && item[3] != null)
                         {
-                            UpdateAccessRights(obj, (Object[])item[3]);
+                            UpdateAccessRights(obj, (object[])item[3]);
                             ObjectList.Add(obj);
                         }
                     }
@@ -601,8 +599,8 @@ namespace Gurux.DLMS.Objects
             {
                 if (e.Value != null)
                 {
-                    ClientSAP = Convert.ToByte(((Object[])e.Value)[0]);
-                    ServerSAP = Convert.ToUInt16(((Object[])e.Value)[1]);
+                    ClientSAP = Convert.ToByte(((object[])e.Value)[0]);
+                    ServerSAP = Convert.ToUInt16(((object[])e.Value)[1]);
                 }
             }
             else if (e.Index == 4)
@@ -678,7 +676,7 @@ namespace Gurux.DLMS.Objects
                 }
                 else if (e.Value != null)
                 {
-                    Object[] arr = (Object[])e.Value;
+                    object[] arr = (object[])e.Value;
                     ApplicationContextName.JointIsoCtt = Convert.ToByte(arr[0]);
                     ApplicationContextName.Country = Convert.ToByte(arr[1]);
                     ApplicationContextName.CountryName = Convert.ToUInt16(arr[2]);
@@ -692,10 +690,13 @@ namespace Gurux.DLMS.Objects
             {
                 if (e.Value != null)
                 {
-                    Object[] arr = (Object[])e.Value;
-                    XDLMSContextInfo.Conformance = arr[0].ToString();
+                    object[] arr = (object[])e.Value;
+                    GXByteBuffer bb = new GXByteBuffer();
+                    GXCommon.SetBitString(bb, arr[0]);
+                    bb.SetUInt8(0, 0);
+                    XDLMSContextInfo.Conformance = (Conformance)bb.GetUInt32();
                     XDLMSContextInfo.MaxReceivePduSize = Convert.ToUInt16(arr[1]);
-                    XDLMSContextInfo.MaxSendPpuSize = Convert.ToUInt16(arr[2]);
+                    XDLMSContextInfo.MaxSendPduSize = Convert.ToUInt16(arr[2]);
                     XDLMSContextInfo.DlmsVersionNumber = Convert.ToByte(arr[3]);
                     XDLMSContextInfo.QualityOfService = Convert.ToSByte(arr[4]);
                     XDLMSContextInfo.CypheringInfo = (byte[])arr[5];
@@ -709,16 +710,16 @@ namespace Gurux.DLMS.Objects
                     GXByteBuffer arr = new GXByteBuffer(e.Value as byte[]);
                     if (arr.GetUInt8(0) == 0x60)
                     {
-                        AuthenticationMechanismMame.JointIsoCtt = 0;
+                        AuthenticationMechanismName.JointIsoCtt = 0;
                         ++arr.Position;
-                        AuthenticationMechanismMame.Country = 0;
+                        AuthenticationMechanismName.Country = 0;
                         ++arr.Position;
-                        AuthenticationMechanismMame.CountryName = 0;
+                        AuthenticationMechanismName.CountryName = 0;
                         ++arr.Position;
-                        AuthenticationMechanismMame.IdentifiedOrganization = arr.GetUInt8();
-                        AuthenticationMechanismMame.DlmsUA = arr.GetUInt8();
-                        AuthenticationMechanismMame.AuthenticationMechanismName = arr.GetUInt8();
-                        AuthenticationMechanismMame.MechanismId = (Authentication)arr.GetUInt8();
+                        AuthenticationMechanismName.IdentifiedOrganization = arr.GetUInt8();
+                        AuthenticationMechanismName.DlmsUA = arr.GetUInt8();
+                        AuthenticationMechanismName.AuthenticationMechanismName = arr.GetUInt8();
+                        AuthenticationMechanismName.MechanismId = (Authentication)arr.GetUInt8();
                     }
                     else
                     {
@@ -732,55 +733,55 @@ namespace Gurux.DLMS.Objects
                         {
                             throw new ArgumentOutOfRangeException();
                         }
-                        AuthenticationMechanismMame.JointIsoCtt = arr.GetUInt8();
+                        AuthenticationMechanismName.JointIsoCtt = arr.GetUInt8();
                         //Get tag
                         if (arr.GetUInt8() != 0x11)
                         {
                             throw new ArgumentOutOfRangeException();
                         }
-                        AuthenticationMechanismMame.Country = arr.GetUInt8();
+                        AuthenticationMechanismName.Country = arr.GetUInt8();
                         //Get tag
                         if (arr.GetUInt8() != 0x12)
                         {
                             throw new ArgumentOutOfRangeException();
                         }
-                        AuthenticationMechanismMame.CountryName = arr.GetUInt16();
+                        AuthenticationMechanismName.CountryName = arr.GetUInt16();
                         //Get tag
                         if (arr.GetUInt8() != 0x11)
                         {
                             throw new ArgumentOutOfRangeException();
                         }
-                        AuthenticationMechanismMame.IdentifiedOrganization = arr.GetUInt8();
+                        AuthenticationMechanismName.IdentifiedOrganization = arr.GetUInt8();
                         //Get tag
                         if (arr.GetUInt8() != 0x11)
                         {
                             throw new ArgumentOutOfRangeException();
                         }
-                        AuthenticationMechanismMame.DlmsUA = arr.GetUInt8();
+                        AuthenticationMechanismName.DlmsUA = arr.GetUInt8();
                         //Get tag
                         if (arr.GetUInt8() != 0x11)
                         {
                             throw new ArgumentOutOfRangeException();
                         }
-                        AuthenticationMechanismMame.AuthenticationMechanismName = arr.GetUInt8();
+                        AuthenticationMechanismName.AuthenticationMechanismName = arr.GetUInt8();
                         //Get tag
                         if (arr.GetUInt8() != 0x11)
                         {
                             throw new ArgumentOutOfRangeException();
                         }
-                        AuthenticationMechanismMame.MechanismId = (Authentication)arr.GetUInt8();
+                        AuthenticationMechanismName.MechanismId = (Authentication)arr.GetUInt8();
                     }
                 }
                 else if (e.Value != null)
                 {
-                    Object[] arr = (Object[])e.Value;
-                    AuthenticationMechanismMame.JointIsoCtt = Convert.ToByte(arr[0]);
-                    AuthenticationMechanismMame.Country = Convert.ToByte(arr[1]);
-                    AuthenticationMechanismMame.CountryName = Convert.ToUInt16(arr[2]);
-                    AuthenticationMechanismMame.IdentifiedOrganization = Convert.ToByte(arr[3]);
-                    AuthenticationMechanismMame.DlmsUA = Convert.ToByte(arr[4]);
-                    AuthenticationMechanismMame.AuthenticationMechanismName = Convert.ToByte(arr[5]);
-                    AuthenticationMechanismMame.MechanismId = (Authentication)Convert.ToByte(arr[6]);
+                    object[] arr = (object[])e.Value;
+                    AuthenticationMechanismName.JointIsoCtt = Convert.ToByte(arr[0]);
+                    AuthenticationMechanismName.Country = Convert.ToByte(arr[1]);
+                    AuthenticationMechanismName.CountryName = Convert.ToUInt16(arr[2]);
+                    AuthenticationMechanismName.IdentifiedOrganization = Convert.ToByte(arr[3]);
+                    AuthenticationMechanismName.DlmsUA = Convert.ToByte(arr[4]);
+                    AuthenticationMechanismName.AuthenticationMechanismName = Convert.ToByte(arr[5]);
+                    AuthenticationMechanismName.MechanismId = (Authentication)Convert.ToByte(arr[6]);
                 }
             }
             else if (e.Index == 7)
@@ -800,12 +801,121 @@ namespace Gurux.DLMS.Objects
             }
             else if (e.Index == 9)
             {
-                SecuritySetupReference = GXDLMSClient.ChangeType((byte[])e.Value, DataType.OctetString).ToString();
+                SecuritySetupReference = GXCommon.ToLogicalName(e.Value);
             }
             else
             {
                 e.Error = ErrorCode.ReadWriteDenied;
             }
+        }
+
+        void IGXDLMSBase.Load(GXXmlReader reader)
+        {
+            ClientSAP = (byte)reader.ReadElementContentAsInt("ClientSAP");
+            ServerSAP = (byte)reader.ReadElementContentAsInt("ServerSAP");
+            if (reader.IsStartElement("ApplicationContextName", true))
+            {
+                ApplicationContextName.JointIsoCtt = (byte)reader.ReadElementContentAsInt("JointIsoCtt");
+                ApplicationContextName.Country = (byte)reader.ReadElementContentAsInt("Country");
+                ApplicationContextName.CountryName = (ushort)reader.ReadElementContentAsInt("CountryName");
+                ApplicationContextName.IdentifiedOrganization = (byte)reader.ReadElementContentAsInt("IdentifiedOrganization");
+                ApplicationContextName.DlmsUA = (byte)reader.ReadElementContentAsInt("DlmsUA");
+                ApplicationContextName.ApplicationContext = (byte)reader.ReadElementContentAsInt("ApplicationContext");
+                ApplicationContextName.ContextId = (byte)reader.ReadElementContentAsInt("ContextId");
+                reader.ReadEndElement("ApplicationContextName");
+            }
+
+            if (reader.IsStartElement("XDLMSContextInfo", true))
+            {
+                XDLMSContextInfo.Conformance = (Conformance)reader.ReadElementContentAsInt("Conformance");
+                XDLMSContextInfo.MaxReceivePduSize = (ushort)reader.ReadElementContentAsInt("MaxReceivePduSize");
+                XDLMSContextInfo.MaxSendPduSize = (ushort)reader.ReadElementContentAsInt("MaxSendPduSize");
+                XDLMSContextInfo.DlmsVersionNumber = (byte)reader.ReadElementContentAsInt("DlmsVersionNumber");
+                XDLMSContextInfo.QualityOfService = (sbyte)reader.ReadElementContentAsInt("QualityOfService");
+                XDLMSContextInfo.CypheringInfo = GXDLMSTranslator.HexToBytes(reader.ReadElementContentAsString("CypheringInfo"));
+                reader.ReadEndElement("XDLMSContextInfo");
+            }
+            if (reader.IsStartElement("XDLMSContextInfo", true))
+            {
+                AuthenticationMechanismName.JointIsoCtt = (byte)reader.ReadElementContentAsInt("JointIsoCtt");
+                AuthenticationMechanismName.Country = (byte)reader.ReadElementContentAsInt("Country");
+                AuthenticationMechanismName.CountryName = (ushort)reader.ReadElementContentAsInt("CountryName");
+                AuthenticationMechanismName.IdentifiedOrganization = (byte)reader.ReadElementContentAsInt("IdentifiedOrganization");
+                AuthenticationMechanismName.DlmsUA = (byte)reader.ReadElementContentAsInt("DlmsUA");
+                AuthenticationMechanismName.AuthenticationMechanismName = (byte)reader.ReadElementContentAsInt("AuthenticationMechanismName");
+                AuthenticationMechanismName.MechanismId = (Authentication)reader.ReadElementContentAsInt("MechanismId");
+                reader.ReadEndElement("XDLMSContextInfo");
+            }
+            string str = reader.ReadElementContentAsString("Secret");
+            if (str == null)
+            {
+                Secret = null;
+            }
+            else
+            {
+                Secret = GXDLMSTranslator.HexToBytes(str);
+            }
+            str = reader.ReadElementContentAsString("HlsSecret");
+            if (str == null)
+            {
+                HlsSecret = null;
+            }
+            else
+            {
+                HlsSecret = GXDLMSTranslator.HexToBytes(str);
+            }
+            AssociationStatus = (AssociationStatus)reader.ReadElementContentAsInt("AssociationStatus");
+            SecuritySetupReference = reader.ReadElementContentAsString("SecuritySetupReference");
+        }
+
+        void IGXDLMSBase.Save(GXXmlWriter writer)
+        {
+            writer.WriteElementString("ClientSAP", ClientSAP);
+            writer.WriteElementString("ServerSAP", ServerSAP);
+            if (ApplicationContextName != null)
+            {
+                writer.WriteStartElement("ApplicationContextName");
+                writer.WriteElementString("JointIsoCtt", ApplicationContextName.JointIsoCtt);
+                writer.WriteElementString("Country", ApplicationContextName.Country);
+                writer.WriteElementString("CountryName", ApplicationContextName.CountryName);
+                writer.WriteElementString("IdentifiedOrganization", ApplicationContextName.IdentifiedOrganization);
+                writer.WriteElementString("DlmsUA", ApplicationContextName.DlmsUA);
+                writer.WriteElementString("ApplicationContext", ApplicationContextName.ApplicationContext);
+                writer.WriteElementString("ContextId", ApplicationContextName.ContextId);
+                writer.WriteEndElement();
+            }
+            if (XDLMSContextInfo != null)
+            {
+                writer.WriteStartElement("XDLMSContextInfo");
+                writer.WriteElementString("Conformance", ((int)XDLMSContextInfo.Conformance));
+                writer.WriteElementString("MaxReceivePduSize", XDLMSContextInfo.MaxReceivePduSize);
+                writer.WriteElementString("MaxSendPduSize", XDLMSContextInfo.MaxSendPduSize);
+                writer.WriteElementString("DlmsVersionNumber", XDLMSContextInfo.DlmsVersionNumber);
+                writer.WriteElementString("QualityOfService", XDLMSContextInfo.QualityOfService);
+                writer.WriteElementString("CypheringInfo", GXDLMSTranslator.ToHex(XDLMSContextInfo.CypheringInfo));
+                writer.WriteEndElement();
+            }
+            if (AuthenticationMechanismName != null)
+            {
+                writer.WriteStartElement("XDLMSContextInfo");
+                writer.WriteElementString("JointIsoCtt", AuthenticationMechanismName.JointIsoCtt);
+                writer.WriteElementString("Country", AuthenticationMechanismName.Country);
+                writer.WriteElementString("CountryName", AuthenticationMechanismName.CountryName);
+                writer.WriteElementString("IdentifiedOrganization", AuthenticationMechanismName.IdentifiedOrganization);
+                writer.WriteElementString("DlmsUA", AuthenticationMechanismName.DlmsUA);
+                writer.WriteElementString("AuthenticationMechanismName", AuthenticationMechanismName.AuthenticationMechanismName);
+                writer.WriteElementString("MechanismId", (int)AuthenticationMechanismName.MechanismId);
+                writer.WriteEndElement();
+            }
+            writer.WriteElementString("Secret", GXDLMSTranslator.ToHex(Secret));
+            writer.WriteElementString("HlsSecret", GXDLMSTranslator.ToHex(HlsSecret));
+
+            writer.WriteElementString("AssociationStatus", (int)AssociationStatus);
+            writer.WriteElementString("SecuritySetupReference", SecuritySetupReference);
+        }
+
+        void IGXDLMSBase.PostLoad(GXXmlReader reader)
+        {
         }
         #endregion
     }

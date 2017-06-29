@@ -41,6 +41,7 @@ using System.Xml.Serialization;
 using Gurux.DLMS.ManufacturerSettings;
 using Gurux.DLMS.Internal;
 using Gurux.DLMS.Enums;
+using System.Xml;
 
 namespace Gurux.DLMS.Objects
 {
@@ -117,7 +118,7 @@ namespace Gurux.DLMS.Objects
         /// <returns></returns>
         public byte[][] Delete(GXDLMSClient client, GXDLMSSpecialDay entry)
         {
-            return client.Method(this, 2, (UInt16)entry.Index);
+            return client.Method(this, 2, (ushort)entry.Index);
         }
 
         /// <inheritdoc cref="GXDLMSObject.GetValues"/>
@@ -147,7 +148,7 @@ namespace Gurux.DLMS.Objects
         /// <inheritdoc cref="IGXDLMSBase.GetNames"/>
         string[] IGXDLMSBase.GetNames()
         {
-            return new string[] { Gurux.DLMS.Properties.Resources.LogicalNameTxt, "Entries" };
+            return new string[] { Internal.GXCommon.GetLogicalNameString(), "Entries" };
         }
 
         int IGXDLMSBase.GetAttributeCount()
@@ -178,7 +179,7 @@ namespace Gurux.DLMS.Objects
         {
             if (e.Index == 1)
             {
-                return this.LogicalName;
+                return GXCommon.LogicalNameToBytes(LogicalName);
             }
             if (e.Index == 2)
             {
@@ -215,14 +216,7 @@ namespace Gurux.DLMS.Objects
         {
             if (e.Index == 1)
             {
-                if (e.Value is string)
-                {
-                    LogicalName = e.Value.ToString();
-                }
-                else
-                {
-                    LogicalName = GXDLMSClient.ChangeType((byte[])e.Value, DataType.OctetString).ToString();
-                }
+                LogicalName = GXCommon.ToLogicalName(e.Value);
             }
             else if (e.Index == 2)
             {
@@ -230,11 +224,11 @@ namespace Gurux.DLMS.Objects
                 if (e.Value != null)
                 {
                     List<GXDLMSSpecialDay> items = new List<GXDLMSSpecialDay>();
-                    foreach (Object[] item in (Object[])e.Value)
+                    foreach (object[] item in (object[])e.Value)
                     {
                         GXDLMSSpecialDay it = new GXDLMSSpecialDay();
                         it.Index = Convert.ToUInt16(item[0]);
-                        it.Date = (GXDateTime)GXDLMSClient.ChangeType((byte[])item[1], DataType.Date);
+                        it.Date = (GXDate)GXDLMSClient.ChangeType((byte[])item[1], DataType.Date, settings.UseUtc2NormalTime);
                         it.DayId = Convert.ToByte(item[2]);
                         items.Add(it);
                     }
@@ -251,6 +245,45 @@ namespace Gurux.DLMS.Objects
         {
             e.Error = ErrorCode.ReadWriteDenied;
             return null;
+        }
+
+        void IGXDLMSBase.Load(GXXmlReader reader)
+        {
+            List<GXDLMSSpecialDay> list = new List<GXDLMSSpecialDay>();
+            if (reader.IsStartElement("Entries", true))
+            {
+                while (reader.IsStartElement("Entry", true))
+                {
+                    GXDLMSSpecialDay it = new GXDLMSSpecialDay();
+                    it.Index = (ushort)reader.ReadElementContentAsInt("Index");
+                    it.Date = new GXDate(reader.ReadElementContentAsString("Date"));
+                    it.DayId = (byte)reader.ReadElementContentAsInt("DayId");
+                    list.Add(it);
+                }
+                reader.ReadEndElement("Entries");
+            }
+            Entries = list.ToArray();
+        }
+
+        void IGXDLMSBase.Save(GXXmlWriter writer)
+        {
+            if (Entries != null)
+            {
+                writer.WriteStartElement("Entries");
+                foreach (GXDLMSSpecialDay it in Entries)
+                {
+                    writer.WriteStartElement("Entry");
+                    writer.WriteElementString("Index", it.Index);
+                    writer.WriteElementString("Date", it.Date.ToFormatString());
+                    writer.WriteElementString("DayId", it.DayId);
+                    writer.WriteEndElement();//Entry
+                }
+                writer.WriteEndElement();//Entries
+            }
+        }
+
+        void IGXDLMSBase.PostLoad(GXXmlReader reader)
+        {
         }
 
         #endregion

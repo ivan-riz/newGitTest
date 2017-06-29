@@ -40,15 +40,17 @@ using System.ComponentModel;
 
 using System.Collections;
 using Gurux.DLMS.Enums;
-
+using System.Xml;
+using System.IO;
+using Gurux.DLMS.Internal;
 
 namespace Gurux.DLMS.Objects
 {
     /// <summary>
     /// Collection of DLMS objects.
     /// </summary>
-    public class GXDLMSObjectCollection : IList<GXDLMSObject>, 
-                            ICollection<GXDLMSObject>, IEnumerable<GXDLMSObject>                            
+    public class GXDLMSObjectCollection : IList<GXDLMSObject>,
+                            ICollection<GXDLMSObject>, IEnumerable<GXDLMSObject>
     {
         private List<GXDLMSObject> Objects;
 
@@ -72,14 +74,14 @@ namespace Gurux.DLMS.Objects
         {
             //Nothing to do
         }
-        
+
         /// <summary>
         /// Constructor.
         /// </summary>        
         public GXDLMSObjectCollection(int capacity)
         {
             this.Items = new List<GXDLMSObject>(capacity);
-        }        
+        }
 
         #region IList Methods
         /// <summary>
@@ -99,8 +101,8 @@ namespace Gurux.DLMS.Objects
         /// <param name="index">The zero-based index at which item should be inserted.</param>
         /// <param name="item">The object to insert into the System.Collections.Generic.IList.</param>
         public void Insert(int index, GXDLMSObject item)
-        {            
-            this.Items.Insert(index, item);         
+        {
+            this.Items.Insert(index, item);
         }
 
         /// <summary>
@@ -108,8 +110,8 @@ namespace Gurux.DLMS.Objects
         /// </summary>
         /// <param name="index">The zero-based index of the item to remove.</param>
         public void RemoveAt(int index)
-        {            
-            this.Items.RemoveAt(index);         
+        {
+            this.Items.RemoveAt(index);
         }
         #endregion
 
@@ -117,7 +119,7 @@ namespace Gurux.DLMS.Objects
         /// Constructor.
         /// </summary>
         /// <param name="parent"></param>
-        public GXDLMSObjectCollection(Object parent)
+        public GXDLMSObjectCollection(object parent)
             : this(0)
         {
             this.Parent = parent;
@@ -133,7 +135,7 @@ namespace Gurux.DLMS.Objects
         {
             get;
             set;
-        }      
+        }
 
         public GXDLMSObjectCollection GetObjects(ObjectType type)
         {
@@ -208,7 +210,7 @@ namespace Gurux.DLMS.Objects
             sb.Append(']');
             return sb.ToString();
         }
-           
+
         #region IList<GXDLMSObject> Members
 
         /// <summary>
@@ -226,7 +228,7 @@ namespace Gurux.DLMS.Objects
         #region ICollection<GXDLMSObject> Members
 
         public void Add(GXDLMSObject item)
-        {            
+        {
             Objects.Add(item);
             if (item.Parent == null)
             {
@@ -251,7 +253,7 @@ namespace Gurux.DLMS.Objects
 
         public int Count
         {
-            get 
+            get
             {
                 return Objects.Count;
             }
@@ -259,7 +261,7 @@ namespace Gurux.DLMS.Objects
 
         public bool IsReadOnly
         {
-            get 
+            get
             {
                 return false;
             }
@@ -305,5 +307,120 @@ namespace Gurux.DLMS.Objects
 
         #endregion
 
+        /// <summary>
+        ///  Load COSEM objects from the file.
+        /// </summary>
+        /// <param name="filename"> File path.</param>
+        /// <returns>Collection of serialized COSEM objects.</returns>
+        public static GXDLMSObjectCollection Load(string filename)
+        {
+            using (Stream stream = File.OpenRead(filename))
+            {
+                return Load(stream);
+            }
+        }
+
+        /// <summary>
+        ///  Load COSEM objects from the file.
+        /// </summary>
+        /// <param name="stream">Stream.</param>
+        /// <returns>Collection of serialized COSEM objects.</returns>
+        public static GXDLMSObjectCollection Load(Stream stream)
+        {
+            GXDLMSObject obj = null;
+            string target;
+            ObjectType type;
+            using (GXXmlReader reader = new GXXmlReader(stream))
+            {
+                while (!reader.EOF)
+                {
+                    if (reader.IsStartElement())
+                    {
+                        target = reader.Name;
+                        if (string.Compare("Objects", target, true) == 0)
+                        {
+                            //Skip.
+                            reader.Read();
+                        }
+                        else if (string.Compare("Object", target, true) == 0)
+                        {
+                            string str = reader.GetAttribute(0);
+                            if (int.TryParse(str, out int r))
+                            {
+                                type = (ObjectType)r;
+                            }
+                            else
+                            {
+                                type = (ObjectType)Enum.Parse(typeof(ObjectType), str);
+                            }
+                            reader.Read();
+                            obj = GXDLMSClient.CreateObject(type);
+                            reader.Objects.Add(obj);
+                        }
+                        else if (string.Compare("SN", target, true) == 0)
+                        {
+                            obj.ShortName = (ushort)reader.ReadElementContentAsInt("SN");
+                        }
+                        else if (string.Compare("LN", target, true) == 0)
+                        {
+                            obj.LogicalName = reader.ReadElementContentAsString("LN");
+                        }
+                        else if (string.Compare("Description", target, true) == 0)
+                        {
+                            obj.Description = reader.ReadElementContentAsString("Description");
+                        }
+                        else
+                        {
+                            (obj as IGXDLMSBase).Load(reader);
+                            obj = null;
+                        }
+                    }
+                    else
+                    {
+                        reader.Read();
+                    }
+                }
+                return reader.Objects;
+            }
+        }
+
+        /// <summary>
+        /// Save COSEM objects to the file.
+        /// </summary>
+        /// <param name="filename">File name.</param>
+        /// <param name="settings">XML write settings.</param>
+        public void Save(string filename, GXXmlWriterSettings settings)
+        {
+            using (GXXmlWriter writer = new GXXmlWriter(filename))
+            {
+                writer.WriteStartDocument();
+                writer.WriteStartElement("Objects");
+                foreach (GXDLMSObject it in this)
+                {
+                    writer.WriteStartElement("Object");
+                    writer.WriteAttributeString("Type", ((int)it.ObjectType).ToString());
+                    // Add SN
+                    if (it.ShortName != 0)
+                    {
+                        writer.WriteElementString("SN", it.ShortName);
+                    }
+                    // Add LN
+                    writer.WriteElementString("LN", it.LogicalName);
+                    // Add description if given.
+                    if (!string.IsNullOrEmpty(it.Description))
+                    {
+                        writer.WriteElementString("Description", it.Description);
+                    }
+                    if (settings.Values)
+                    {
+                        (it as IGXDLMSBase).Save(writer);
+                    }
+                    // Close object.
+                    writer.WriteEndElement();
+                }
+                writer.WriteEndElement();
+                writer.WriteEndDocument();
+            }
+        }
     }
 }

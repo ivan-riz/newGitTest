@@ -135,7 +135,7 @@
     <None Include="packages.config" />
   </ItemGroup>
   <ItemGroup>
-    <ProjectReference Include="..\..\GURUX.Common\Development\Gurux.Common.csproj">
+    <ProjectReference Include="..\..\Gurux.Common\Development\Gurux.Common.csproj">
       <Project>{749652d4-4779-4869-ad81-5211a661cd1b}</Project>
       <Name>Gurux.Common</Name>
     </ProjectReference>

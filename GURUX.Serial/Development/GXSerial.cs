@@ -60,7 +60,7 @@ namespace Gurux.Serial
         static Dictionary<string, List<int>> BaudRates = new Dictionary<string, List<int>>();
         object m_Eop;
         GXSynchronousMediaBase m_syncBase;
-        UInt64 m_BytesSent, m_BytesReceived;
+        ulong m_BytesSent, m_BytesReceived;
         readonly object m_Synchronous = new object();        
 		readonly object m_baseLock = new object();        
         internal System.IO.Ports.SerialPort m_base = new System.IO.Ports.SerialPort();
@@ -95,7 +95,7 @@ namespace Gurux.Serial
                 BaudRates[portName.ToLower()] = items;
                 try
                 {
-                    Int32 value = 0;
+                    int value = 0;
                     using (SerialPort port = new SerialPort(portName))
                     {
                         port.Open();
@@ -103,7 +103,7 @@ namespace Gurux.Serial
                         if (fi != null)
                         {
                             object p = fi.GetValue(port.BaseStream);
-                            value = (Int32)p.GetType().GetField("dwSettableBaud", BindingFlags.Instance | BindingFlags.NonPublic | BindingFlags.Public).GetValue(p);
+                            value = (int)p.GetType().GetField("dwSettableBaud", BindingFlags.Instance | BindingFlags.NonPublic | BindingFlags.Public).GetValue(p);
                         }
                     }
                     if (value != 0)
@@ -243,10 +243,7 @@ namespace Gurux.Serial
 
         internal void NotifyError(Exception ex)
         {
-            if (m_OnError != null)
-            {
-                m_OnError(this, ex);
-            }
+            m_OnError?.Invoke(this, ex);
             if (m_Trace >= TraceLevel.Error && m_OnTrace != null)
             {
                 m_OnTrace(this, new TraceEventArgs(TraceTypes.Error, ex, null));
@@ -259,10 +256,7 @@ namespace Gurux.Serial
             {
                 m_OnTrace(this, new TraceEventArgs(TraceTypes.Info, state, null));
             }
-            if (m_OnMediaStateChange != null)
-            {
-                m_OnMediaStateChange(this, new MediaStateEventArgs(state));
-            }
+            m_OnMediaStateChange?.Invoke(this, new MediaStateEventArgs(state));
         }
 
 		/// <summary>
@@ -1562,10 +1556,7 @@ namespace Gurux.Serial
 
         private void NotifyPropertyChanged(string info)
         {
-            if (m_OnPropertyChanged != null)
-            {
-                m_OnPropertyChanged(this, new PropertyChangedEventArgs(info));
-            }
+            m_OnPropertyChanged?.Invoke(this, new PropertyChangedEventArgs(info));
         }
 
 
@@ -1736,7 +1727,7 @@ namespace Gurux.Serial
         /// <seealso cref="BytesReceived">BytesReceived</seealso>
         /// <seealso cref="ResetByteCounters">ResetByteCounters</seealso>
         [Browsable(false)]
-        public UInt64 BytesSent
+        public ulong BytesSent
         {
             get
             {
@@ -1750,7 +1741,7 @@ namespace Gurux.Serial
         /// <seealso cref="BytesSent">BytesSent</seealso>
         /// <seealso cref="ResetByteCounters">ResetByteCounters</seealso>
         [Browsable(false)]
-        public UInt64 BytesReceived
+        public ulong BytesReceived
         {
             get
             {

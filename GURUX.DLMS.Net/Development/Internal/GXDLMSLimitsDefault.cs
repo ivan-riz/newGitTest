@@ -43,8 +43,8 @@ namespace Gurux.DLMS.Internal
     {
         internal const byte DefaultMaxInfoRX = 62;
         internal const byte DefaultMaxInfoTX = 128;
-        internal const UInt32 DefaultWindowSizeRX = 1;
-        internal const UInt32 DefaultWindowSizeTX = 1;
+        internal const uint DefaultWindowSizeRX = 1;
+        internal const uint DefaultWindowSizeTX = 1;
 
         internal static void SetValue(GXByteBuffer buff, object data)
         {

@@ -278,8 +278,7 @@ namespace Gurux.Common
         /// <returns></returns>
         public static ProtocolUpdateStatus ShowUpdates(System.Windows.Forms.IWin32Window owner, bool showAddins, bool onlyNew)
         {
-            string[] DisabledItems;
-            return ShowUpdates(owner, showAddins, onlyNew, out DisabledItems);
+            return ShowUpdates(owner, showAddins, onlyNew, out string[] DisabledItems);
         }
 
         /// <summary>

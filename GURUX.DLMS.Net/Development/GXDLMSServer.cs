@@ -42,7 +42,9 @@ using Gurux.DLMS.Internal;
 using Gurux.DLMS.ManufacturerSettings;
 using System.Reflection;
 using System.Threading;
+#if !WINDOWS_UWP
 using System.Security.Cryptography;
+#endif
 using Gurux.DLMS.Enums;
 using Gurux.DLMS.Secure;
 using System.Diagnostics;
@@ -90,7 +92,7 @@ namespace Gurux.DLMS
         /// <param name="sn">Short Name. In Logical name referencing this is not used.</param>
         /// <param name="ln">Logical Name. In Short Name referencing this is not used.</param>
         /// <returns>Found object or null if object is not found.</returns>
-        protected abstract GXDLMSObject FindObject(ObjectType objectType, int sn, String ln);
+        protected abstract GXDLMSObject FindObject(ObjectType objectType, int sn, string ln);
 
         /// <summary>
         /// Check is data sent to this server.
@@ -100,6 +102,19 @@ namespace Gurux.DLMS
         /// <returns>True, if data is sent to this server.</returns>
         protected abstract bool IsTarget(int serverAddress, int clientAddress);
 
+        /// <summary>
+        /// Get attribute access mode.
+        /// </summary>
+        /// <param name="arg">Value event argument.</param>
+        /// <returns>Access mode.</returns>
+        protected abstract AccessMode GetAttributeAccess(ValueEventArgs arg);
+
+        /// <summary>
+        /// Get method access mode.
+        /// </summary>
+        /// <param name="arg">Value event argument.</param>
+        /// <returns>Method access mode.</returns>
+        protected abstract MethodAccessMode GetMethodAccess(ValueEventArgs arg);
 
         /// <summary>
         /// Check whether the authentication and password are correct.
@@ -109,24 +124,6 @@ namespace Gurux.DLMS
         /// <returns>Source diagnostic.</returns>
         protected abstract SourceDiagnostic ValidateAuthentication(
             Authentication authentication, byte[] password);
-
-        /// <summary>
-        /// Get selected value.
-        /// </summary>
-        /// <param name="e">Handle get request.</param>
-        public abstract void Update(UpdateType type, ValueEventArgs e);
-
-        /// <summary>
-        /// Read selected item.
-        /// </summary>
-        /// <param name="args">Handled read requests.</param>
-        protected abstract void Read(ValueEventArgs[] args);
-
-        /// <summary>
-        /// Write selected item.
-        /// </summary>
-        /// <param name="args">Handled write requests.</param>
-        protected abstract void Write(ValueEventArgs[] args);
 
         /// <summary>
         /// Accepted connection is made for the server.
@@ -150,11 +147,53 @@ namespace Gurux.DLMS
         /// <param name="connectionInfo">Connection information.</param>
         protected abstract void Disconnected(GXDLMSConnectionEventArgs connectionInfo);
 
+
+        /// <summary>
+        /// Pre get selected value.
+        /// </summary>
+        /// <param name="args">Event arguments.</param>
+        public abstract void PreGet(ValueEventArgs[] args);
+
+        /// <summary>
+        /// Post get selected value.
+        /// </summary>
+        /// <param name="sender">Sender.</param>
+        /// <param name="args">Event arguments.</param>
+        public abstract void PostGet(ValueEventArgs[] args);
+
+        /// <summary>
+        /// Read selected item.
+        /// </summary>
+        /// <param name="args">Handled read requests.</param>
+        protected abstract void PreRead(ValueEventArgs[] args);
+
+        /// <summary>
+        /// Write selected item.
+        /// </summary>
+        /// <param name="args">Handled write requests.</param>
+        protected abstract void PreWrite(ValueEventArgs[] args);
         /// <summary>
         /// Action is occurred.
         /// </summary>
         /// <param name="args">Handled action requests.</param>
-        protected abstract void Action(ValueEventArgs[] args);
+        protected abstract void PreAction(ValueEventArgs[] args);
+
+        /// <summary>
+        /// Read selected item.
+        /// </summary>
+        /// <param name="args">Handled read requests.</param>
+        protected abstract void PostRead(ValueEventArgs[] args);
+
+        /// <summary>
+        /// Write selected item.
+        /// </summary>
+        /// <param name="args">Handled write requests.</param>
+        protected abstract void PostWrite(ValueEventArgs[] args);
+        /// <summary>
+        /// Action is occurred.
+        /// </summary>
+        /// <param name="args">Handled action requests.</param>
+        protected abstract void PostAction(ValueEventArgs[] args);
 
         /// <summary>
         /// Constructor.
@@ -171,7 +210,7 @@ namespace Gurux.DLMS
         /// <param name="sn">Short Name. In Logical name referencing this is not used.</param>
         /// <param name="ln">Logical Name. In Short Name referencing this is not used.</param>
         /// <returns>Found object or null if object is not found.</returns>
-        internal GXDLMSObject NotifyFindObject(ObjectType objectType, int sn, String ln)
+        internal GXDLMSObject NotifyFindObject(ObjectType objectType, int sn, string ln)
         {
             return FindObject(objectType, sn, ln);
         }
@@ -186,12 +225,45 @@ namespace Gurux.DLMS
         }
 
         /// <summary>
+        /// Get attribute access mode.
+        /// </summary>
+        /// <param name="arg"></param>
+        /// <returns>Access mode.</returns>
+        internal AccessMode NotifyGetAttributeAccess(ValueEventArgs arg)
+        {
+            if (arg.Index == 1)
+            {
+                return AccessMode.Read;
+            }
+            return GetAttributeAccess(arg);
+        }
+
+        /// <summary>
+        /// Get method access mode.
+        /// </summary>
+        /// <param name="arg"></param>
+        /// <returns>Method access mode</returns>
+        internal MethodAccessMode NotifyGetMethodAccess(ValueEventArgs arg)
+        {
+            return GetMethodAccess(arg);
+        }
+
+        /// <summary>
         /// Read selected item.
         /// </summary>
         /// <param name="args">Handled read requests.</param>
         internal void NotifyRead(ValueEventArgs[] args)
         {
-            Read(args);
+            PreRead(args);
+        }
+
+        /// <summary>
+        /// Read selected item.
+        /// </summary>
+        /// <param name="args">Handled read requests.</param>
+        internal void NotifyPostRead(ValueEventArgs[] args)
+        {
+            PostRead(args);
         }
 
         /// <summary>
@@ -200,15 +272,34 @@ namespace Gurux.DLMS
         /// <param name="args">Handled action requests.</param>
         internal void NotifyAction(ValueEventArgs[] args)
         {
-            Action(args);
+            PreAction(args);
         }
+
+        /// <summary>
+        /// Action is occurred.
+        /// </summary>
+        /// <param name="args">Handled action requests.</param>
+        internal void NotifyPostAction(ValueEventArgs[] args)
+        {
+            PostAction(args);
+        }
+
         /// <summary>
         /// Write selected item.
         /// </summary>
         /// <param name="args">Handled write requests.</param>
         internal void NotifyWrite(ValueEventArgs[] args)
         {
-            Write(args);
+            PreWrite(args);
+        }
+
+        /// <summary>
+        /// Write selected item.
+        /// </summary>
+        /// <param name="args">Handled write requests.</param>
+        internal void NotifyPostWrite(ValueEventArgs[] args)
+        {
+            PostWrite(args);
         }
 
         /// <summary>
@@ -219,6 +310,35 @@ namespace Gurux.DLMS
             Settings = new GXDLMSSettings(true);
             Settings.UseLogicalNameReferencing = logicalNameReferencing;
             Reset();
+            this.InterfaceType = type;
+        }
+
+
+        /// <summary>
+        /// Constructor.
+        /// </summary>
+        /// <param name="ln">Logical name settings.</param>
+        /// <param name="type">Interface type.</param>
+        public GXDLMSServer(GXDLMSAssociationLogicalName ln, InterfaceType type)
+        {
+            Settings = new GXDLMSSettings(true);
+            Settings.UseLogicalNameReferencing = true;
+            Reset();
+            Settings.Objects.Add(ln);
+            this.InterfaceType = type;
+        }
+
+        /// <summary>
+        /// Constructor.
+        /// </summary>
+        /// <param name="sn">Short name settings.</param>
+        /// <param name="type">Interface type.</param>
+        public GXDLMSServer(GXDLMSAssociationShortName sn, InterfaceType type)
+        {
+            Settings = new GXDLMSSettings(true);
+            Settings.UseLogicalNameReferencing = false;
+            Reset();
+            Settings.Objects.Add(sn);
             this.InterfaceType = type;
         }
 
@@ -321,7 +441,7 @@ namespace Gurux.DLMS
         /// <summary>
         /// Set starting packet index. Default is One based, but some meters use Zero based value. Usually this is not used.
         /// </summary>
-        public UInt32 StartingBlockIndex
+        public uint StartingBlockIndex
         {
             get
             {
@@ -379,46 +499,22 @@ namespace Gurux.DLMS
         {
             get
             {
-                if (UseLogicalNameReferencing)
-                {
-                    return Settings.LnSettings.Conformance;
-                }
-                return Settings.SnSettings.Conformance;
+                return Settings.ProposedConformance;
             }
             set
             {
-                if (UseLogicalNameReferencing)
-                {
-                    Settings.LnSettings.Conformance = value;
-                }
-                else
-                {
-                    Settings.SnSettings.Conformance = value;
-                }
+                Settings.ProposedConformance = value;
             }
         }
 
         /// <summary>
-        /// Gets Logical Name Settings, read from the device.
+        ///  Close server.
         /// </summary>
-        [Obsolete("Use Conformance enum instead.")]
-        public GXDLMSLNSettings LNSettings
+        public virtual void Close()
         {
-            get
+            foreach (GXDLMSObject it in Items)
             {
-                return Settings.LnSettings;
-            }
-        }
-
-        /// <summary>
-        /// Gets Short Name Settings, read from the device.
-        /// </summary>
-        [Obsolete("Use Conformance enum instead.")]
-        public GXDLMSSNSettings SNSettings
-        {
-            get
-            {
-                return Settings.SnSettings;
+                it.Stop(this);
             }
         }
 
@@ -430,8 +526,23 @@ namespace Gurux.DLMS
         /// </remarks>
         public void Initialize()
         {
-            bool association = false;
+            Initialize(false);
+        }
+
+        /// <summary>
+        ///  Initialize server.
+        /// </summary>
+        /// <remarks>
+        /// This must call after server objects are set.
+        /// <param name="manually">If true, server handle objects and all data are updated manually.</param>
+        public void Initialize(bool manually)
+        {
             Initialized = true;
+            if (manually)
+            {
+                return;
+            }
+            bool association = false;
             for (int pos = 0; pos != Items.Count; ++pos)
             {
                 GXDLMSObject it = Items[pos];
@@ -440,6 +551,7 @@ namespace Gurux.DLMS
                 {
                     throw new Exception("Invalid Logical Name.");
                 }
+                it.Start(this);
                 if (it is GXDLMSProfileGeneric)
                 {
                     GXDLMSProfileGeneric pg = it as GXDLMSProfileGeneric;
@@ -449,14 +561,6 @@ namespace Gurux.DLMS
                         {
                             throw new Exception("Invalid attribute index. SelectedAttributeIndex is not set for " + obj.Key.Name);
                         }
-                    }
-
-                    if (pg.CapturePeriod != 0)
-                    {
-                        GXProfileGenericUpdater p = new GXProfileGenericUpdater(this, pg);
-                        Thread thread = new Thread(new ThreadStart(p.UpdateProfileGenericData));
-                        thread.IsBackground = true;
-                        thread.Start();
                     }
                 }
                 else if (it is GXDLMSAssociationShortName && !this.UseLogicalNameReferencing)
@@ -479,7 +583,6 @@ namespace Gurux.DLMS
                 {
                     hdlcSetup = it as GXDLMSHdlcSetup;
                 }
-
                 else if (!(it is IGXDLMSBase))//Remove unsupported items.
                 {
                     Debug.WriteLine(it.ObjectType.ToString() + " not supported.");
@@ -487,7 +590,6 @@ namespace Gurux.DLMS
                     --pos;
                 }
             }
-
             if (!association)
             {
                 if (UseLogicalNameReferencing)
@@ -504,26 +606,45 @@ namespace Gurux.DLMS
                 }
             }
             //Arrange items by Short Name.
+            UpdateShortNames(false);
+        }
+
+        /// <summary>
+        /// Update short names.
+        /// </summary>
+        protected void UpdateShortNames()
+        {
+            UpdateShortNames(true);
+        }
+
+        /// <summary>
+        /// Update short names.
+        /// </summary>
+        private void UpdateShortNames(bool force)
+        {
+            //Arrange items by Short Name.
             int sn = 0xA0;
-            int offset, count;
             if (!this.UseLogicalNameReferencing)
             {
                 foreach (GXDLMSObject it in Items)
                 {
-                    //Generate Short Name if not given.
-                    if (it.ShortName == 0)
+                    if (!(it is GXDLMSAssociationShortName))
                     {
-                        it.ShortName = (ushort)sn;
-                        //Add method index addresses.
-                        GXDLMS.GetActionInfo(it.ObjectType, out offset, out count);
-                        if (count != 0)
+                        //Generate Short Name if not given.
+                        if (force || it.ShortName == 0)
                         {
-                            sn += offset + (8 * count);
-                        }
-                        else //If there are no methods.
-                        {
-                            //Add attribute index addresses.
-                            sn += 8 * (it as IGXDLMSBase).GetAttributeCount();
+                            it.ShortName = (ushort)sn;
+                            //Add method index addresses.
+                            GXDLMS.GetActionInfo(it.ObjectType, out int offset, out int count);
+                            if (count != 0)
+                            {
+                                sn += offset + (8 * count);
+                            }
+                            else //If there are no methods.
+                            {
+                                //Add attribute index addresses.
+                                sn += 8 * (it as IGXDLMSBase).GetAttributeCount();
+                            }
                         }
                     }
                 }
@@ -541,7 +662,7 @@ namespace Gurux.DLMS
         /// <summary>
         /// Reset settings when connection is made or close.
         /// </summary>
-        /// <param name="all"></param>
+        /// <param name="connected"></param>
         public void Reset(bool connected)
         {
             transaction = null;
@@ -628,6 +749,7 @@ namespace Gurux.DLMS
                 //If client want next frame.
                 if ((info.MoreData & RequestTypes.Frame) == RequestTypes.Frame)
                 {
+                    dataReceived = DateTime.Now;
                     return GXDLMS.GetHdlcFrame(Settings, Settings.ReceiverReady(), replyData);
                 }
                 //Update command if transaction and next frame is asked.
@@ -641,11 +763,7 @@ namespace Gurux.DLMS
                 //Check inactivity time out.
                 if (hdlcSetup != null)
                 {
-                    if (info.Command == Command.Snrm)
-                    {
-                        dataReceived = DateTime.Now;
-                    }
-                    else
+                    if (info.Command != Command.Snrm)
                     {
                         int elapsed = (int)(DateTime.Now - dataReceived).TotalSeconds;
                         //If inactivity time out is elapsed.
@@ -655,10 +773,9 @@ namespace Gurux.DLMS
                             dataReceived = DateTime.MinValue;
                             return null;
                         }
-                        dataReceived = DateTime.Now;
                     }
                 }
-
+                dataReceived = DateTime.Now;
                 byte[] reply = HandleCommand(info.Command, info.Data, connectionInfo);
                 info.Clear();
                 return reply;
@@ -668,7 +785,9 @@ namespace Gurux.DLMS
                 Debug.WriteLine(ex.ToString());
                 if (info.Command != Command.None)
                 {
-                    return ReportError(info.Command, ErrorCode.HardwareFault);
+                    byte[] reply = ReportError(info.Command, ErrorCode.HardwareFault);
+                    info.Clear();
+                    return reply;
                 }
                 else
                 {
@@ -782,7 +901,7 @@ namespace Gurux.DLMS
             }
             if (Settings.UseLogicalNameReferencing)
             {
-                GXDLMS.GetLNPdu(new GXDLMSLNParameters(Settings, cmd, 1, null, null, (byte)error), replyData);
+                GXDLMS.GetLNPdu(new GXDLMSLNParameters(Settings, 0, cmd, 1, null, null, (byte)error), replyData);
             }
             else
             {
@@ -838,7 +957,10 @@ namespace Gurux.DLMS
                 else if (Settings.Authentication > Authentication.Low)
                 {
                     // If High authentication is used.
-                    Settings.StoCChallenge = GXSecure.GenerateChallenge(Settings.Authentication);
+                    if (!Settings.UseCustomChallenge)
+                    {
+                        Settings.StoCChallenge = GXSecure.GenerateChallenge(Settings.Authentication);
+                    }
                     result = AssociationResult.Accepted;
                     diagnostic = SourceDiagnostic.AuthenticationRequired;
                 }

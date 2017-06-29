@@ -40,7 +40,9 @@ using System.ComponentModel;
 using Gurux.DLMS.ManufacturerSettings;
 using System.Xml;
 using System.Xml.Serialization;
+#if !WINDOWS_UWP
 using System.Runtime.Serialization.Formatters.Binary;
+#endif
 using System.IO;
 using System.Runtime.Serialization;
 using System.Reflection;
@@ -113,7 +115,7 @@ namespace Gurux.DLMS.Objects
         {
         }
 
-        public static bool ValidateLogicalName(String ln)
+        public static bool ValidateLogicalName(string ln)
         {
             if (ln == null)
             {
@@ -134,7 +136,6 @@ namespace Gurux.DLMS.Objects
             this.ShortName = sn;
             if (ln != null)
             {
-
                 if (!ValidateLogicalName(ln))
                 {
                     throw new GXDLMSException("Invalid Logical Name.");
@@ -143,7 +144,9 @@ namespace Gurux.DLMS.Objects
             this.LogicalName = ln;
         }
 
+#if !WINDOWS_UWP
         [Browsable(false), DesignerSerializationVisibility(DesignerSerializationVisibility.Hidden)]
+#endif
         [System.Xml.Serialization.XmlIgnore()]
         public Gurux.DLMS.Objects.GXDLMSObjectCollection Parent
         {
@@ -179,26 +182,13 @@ namespace Gurux.DLMS.Objects
         }
 
         /// <summary>
-        /// Reserved for internal use.
-        /// </summary>
-        /// <param name="buff"></param>
-        /// <returns></returns>
-        internal static string ToLogicalName(byte[] buff)
-        {
-            if (buff.Length == 6)
-            {
-                return (buff[0] & 0xFF) + "." + (buff[1] & 0xFF) + "." + (buff[2] & 0xFF) + "." +
-                       (buff[3] & 0xFF) + "." + (buff[4] & 0xFF) + "." + (buff[5] & 0xFF);
-            }
-            return "";
-        }
-
-        /// <summary>
         /// Interface type of the DLMS object.
         /// </summary>
+#if !WINDOWS_UWP
         [ReadOnly(true)]
-        [System.Xml.Serialization.XmlIgnore()]
         [Browsable(false), DesignerSerializationVisibility(DesignerSerializationVisibility.Hidden)]
+#endif
+        [System.Xml.Serialization.XmlIgnore()]
         [EditorBrowsable(EditorBrowsableState.Never)]
         public ObjectType ObjectType
         {
@@ -209,7 +199,9 @@ namespace Gurux.DLMS.Objects
         /// <summary>
         /// DLMS version number.
         /// </summary>
+#if !WINDOWS_UWP
         [ReadOnly(true)]
+#endif
         [DefaultValue(0)]
         public int Version
         {
@@ -224,7 +216,9 @@ namespace Gurux.DLMS.Objects
         /// When using SN referencing, retrieves the base name of the DLMS object.
         /// When using LN referencing, the value is 0.
         /// </remarks>
+#if !WINDOWS_UWP
         [ReadOnly(true)]
+#endif
         [DefaultValue(0)]
         public ushort ShortName
         {
@@ -270,7 +264,9 @@ namespace Gurux.DLMS.Objects
         /// <summary>
         /// object attribute collection.
         /// </summary>
+#if !WINDOWS_UWP
         [DesignerSerializationVisibility(DesignerSerializationVisibility.Content)]
+#endif
         [EditorBrowsable(EditorBrowsableState.Never)]
         [XmlArray("Attributes")]
         [XmlArrayItem("Item")]
@@ -283,7 +279,9 @@ namespace Gurux.DLMS.Objects
         /// <summary>
         /// object attribute collection.
         /// </summary>
+#if !WINDOWS_UWP
         [DesignerSerializationVisibility(DesignerSerializationVisibility.Content)]
+#endif
         [EditorBrowsable(EditorBrowsableState.Never)]
         [XmlArray("Methods")]
         [XmlArrayItem("Item")]
@@ -301,10 +299,7 @@ namespace Gurux.DLMS.Objects
         public void ClearDirty(int attributeIndex)
         {
             DirtyAttributes.Remove(attributeIndex);
-            if (OnChange != null)
-            {
-                OnChange(this, false, attributeIndex, null);
-            }
+            OnChange?.Invoke(this, false, attributeIndex, null);
         }
 
         /// <summary>
@@ -344,10 +339,7 @@ namespace Gurux.DLMS.Objects
         public void UpdateDirty(int attributeIndex, object value)
         {
             DirtyAttributes[attributeIndex] = value;
-            if (OnChange != null)
-            {
-                OnChange(this, true, attributeIndex, value);
-            }
+            OnChange?.Invoke(this, true, attributeIndex, value);
         }
 
         /// <summary>
@@ -501,6 +493,38 @@ namespace Gurux.DLMS.Objects
         {
             GXDLMSAttributeSettings att = GetAttribute(index, null);
             return att.Static;
+        }
+
+        /// <summary>
+        /// Server calls this when it's started.
+        /// </summary>
+        internal virtual void Start(GXDLMSServer server)
+        {
+
+        }
+
+        /// <summary>
+        /// Server calls this when it's closed.
+        /// </summary>
+        internal virtual void Stop(GXDLMSServer server)
+        {
+
+        }
+
+        /// <summary>
+        /// Copy content.
+        /// </summary>
+        /// <param name="target">Target object.</param>
+        public void CopyTo(GXDLMSObject target)
+        {
+            foreach (PropertyInfo it in GetType().GetProperties(BindingFlags.Public | BindingFlags.Instance))
+            {
+                if (it.CanRead && it.CanWrite)
+                {
+                    object value = it.GetValue(this, null);
+                    it.SetValue(target, value, null);
+                }
+            }
         }
     }
 }

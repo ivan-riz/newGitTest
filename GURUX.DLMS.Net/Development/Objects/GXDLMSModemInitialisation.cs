@@ -53,7 +53,7 @@ namespace Gurux.DLMS.Objects
             set;
         }
 
-        public UInt16 Delay
+        public ushort Delay
         {
             get;
             set;

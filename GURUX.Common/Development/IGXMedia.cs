@@ -251,7 +251,7 @@ namespace Gurux.Common
         /// </summary>
         /// <seealso cref="BytesReceived">BytesReceived</seealso>
         /// <seealso cref="ResetByteCounters">ResetByteCounters</seealso>
-        UInt64 BytesSent
+        ulong BytesSent
         {
             get;
         }
@@ -261,7 +261,7 @@ namespace Gurux.Common
         /// </summary>
         /// <seealso cref="BytesSent">BytesSent</seealso>
         /// <seealso cref="ResetByteCounters">ResetByteCounters</seealso>
-        UInt64 BytesReceived
+        ulong BytesReceived
         {
             get;
         }

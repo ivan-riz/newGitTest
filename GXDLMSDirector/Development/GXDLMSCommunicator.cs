@@ -157,6 +157,7 @@ namespace GXDLMSDirector
             ReadDLMSPacket(data, 3, reply);
         }
 
+        uint cnt = 0;
         /// <summary>
         /// Read DLMS Data from the device.
         /// </summary>
@@ -255,6 +256,11 @@ namespace GXDLMSDirector
                 parent.OnTrace(parent, "-> " + DateTime.Now.ToLongTimeString() + " " + GXCommon.ToHex(p.Reply, true));
             }
             GXLogWriter.WriteLog("Received data", p.Reply);
+
+            cnt++;
+            System.Diagnostics.Debug.Write(cnt.ToString());
+            System.Diagnostics.Debug.Write(" Received data ");
+            System.Diagnostics.Debug.WriteLine(BitConverter.ToString(p.Reply));
             if (reply.Error != 0)
             {
                 if (reply.Error == (int)ErrorCode.Rejected)

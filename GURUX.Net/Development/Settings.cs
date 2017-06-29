@@ -159,10 +159,7 @@ namespace Gurux.Net
             Dirty = true;
             UseIPv6CB.Enabled = ServerCB.Checked;
             IPAddressTB.Enabled = !ServerCB.Checked;
-            if (propertyChanged != null)
-            {
-                propertyChanged(this, new PropertyChangedEventArgs("Server"));
-            }
+            propertyChanged?.Invoke(this, new PropertyChangedEventArgs("Server"));
         }
 
         #region IGXPropertyPage Members
@@ -205,37 +202,25 @@ namespace Gurux.Net
         private void UseIPv6CB_CheckedChanged(object sender, EventArgs e)
         {
             Dirty = true;
-            if (propertyChanged != null)
-            {
-                propertyChanged(this, new PropertyChangedEventArgs("UseIPv6"));
-            }
+            propertyChanged?.Invoke(this, new PropertyChangedEventArgs("UseIPv6"));
         }
 
         private void IPAddressTB_TextChanged(object sender, EventArgs e)
         {
             Dirty = true;
-            if (propertyChanged != null)
-            {
-                propertyChanged(this, new PropertyChangedEventArgs("IPAddress"));
-            }
+            propertyChanged?.Invoke(this, new PropertyChangedEventArgs("IPAddress"));
         }
 
         private void PortTB_TextChanged(object sender, EventArgs e)
         {
             Dirty = true;
-            if (propertyChanged != null)
-            {
-                propertyChanged(this, new PropertyChangedEventArgs("Port"));
-            }
+            propertyChanged?.Invoke(this, new PropertyChangedEventArgs("Port"));
         }
 
         private void ProtocolCB_SelectedIndexChanged(object sender, EventArgs e)
         {
             Dirty = true;
-            if (propertyChanged != null)
-            {
-                propertyChanged(this, new PropertyChangedEventArgs("Protocol"));
-            }
+            propertyChanged?.Invoke(this, new PropertyChangedEventArgs("Protocol"));
         }
     }
 }

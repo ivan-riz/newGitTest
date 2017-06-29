@@ -47,7 +47,7 @@ namespace Gurux.DLMS.Objects
             set;
         }
 
-        public UInt16 ScriptSelector
+        public ushort ScriptSelector
         {
             get;
             set;

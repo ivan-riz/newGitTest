@@ -217,11 +217,8 @@ namespace Gurux.Common.JSon
         {
             GXAsyncData<T> data = (GXAsyncData<T>)asyncResult.AsyncState;
             WebResponse res = data.Request.EndGetResponse(asyncResult);
-            T result = GetResponse<T>(res);           
-            if (data.OnDone != null)
-            {
-                data.OnDone(this, result);
-            }
+            T result = GetResponse<T>(res);
+            data.OnDone?.Invoke(this, result);
         }
 
         internal class GXAsyncData<T>
@@ -425,7 +422,7 @@ namespace Gurux.Common.JSon
                 {                   
                     if (response.StatusCode != HttpStatusCode.OK)
                     {
-                        throw new Exception(String.Format
+                        throw new Exception(string.Format
                             ("Server error (HTTP {0}: {1}).",
                             response.StatusCode,
                             response.StatusDescription));

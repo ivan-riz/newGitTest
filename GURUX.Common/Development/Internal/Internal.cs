@@ -314,7 +314,7 @@ namespace Gurux.Common.Internal
         /// <param name="str"></param>
         /// <param name="length"></param>
         /// <returns></returns>
-        public static List<string> SplitInParts(String str, Int32 length)
+        public static List<string> SplitInParts(string str, int length)
         {
             if (str == null)
             {
@@ -341,8 +341,7 @@ namespace Gurux.Common.Internal
         static public T GetAttribute<T>(object target)
         {
             T[] atts;
-            PropertyInfo pi = target as PropertyInfo;
-            if (pi != null)
+            if (target is PropertyInfo pi)
             {
                 atts = pi.GetCustomAttributes(typeof(T), true) as T[];
             }
@@ -381,8 +380,7 @@ namespace Gurux.Common.Internal
         /// <param name="target">Property what is get from the instance.</param>
         public static object GetValue(object instance, object target)
         {
-            PropertyInfo pi = target as PropertyInfo;
-            if (pi != null)
+            if (target is PropertyInfo pi)
             {
                 return pi.GetValue(instance, null);
             }
@@ -401,8 +399,7 @@ namespace Gurux.Common.Internal
         /// <param name="value">New value.</param>
         public static void SetValue(object instance, object target, object value)
         {
-            PropertyInfo pi = target as PropertyInfo;
-            if (pi != null)
+            if (target is PropertyInfo pi)
             {
                 if (value is IEnumerable)
                 {
@@ -510,10 +507,7 @@ namespace Gurux.Common.Internal
                         {
                             name = attr[0].Name;
                         }
-                        if (attributeUpdater != null)
-                        {
-                            attributeUpdater(type, it.GetCustomAttributes(true), s);
-                        }
+                        attributeUpdater?.Invoke(type, it.GetCustomAttributes(true), s);
                         if ((s.Attributes & Attributes.Ignored) == 0)
                         {
                             if (!it.PropertyType.IsArray)
@@ -550,10 +544,7 @@ namespace Gurux.Common.Internal
                             {
                                 name = attr[0].Name;
                             }
-                            if (attributeUpdater != null)
-                            {
-                                attributeUpdater(type, it.GetCustomAttributes(true), s);
-                            }
+                            attributeUpdater?.Invoke(type, it.GetCustomAttributes(true), s);
                             if ((s.Attributes & Attributes.Ignored) == 0)
                             {
                                 if (!it.FieldType.IsArray)
@@ -636,35 +627,35 @@ namespace Gurux.Common.Internal
                 }
                 return Enum.Parse(type, value.ToString());
             }
-            else if (type == typeof(System.Decimal))
+            else if (type == typeof(decimal))
             {
                 if (Convert.ToDouble(value) == -7.9228162514264338E+28)
                 {
-                    return System.Decimal.MinValue;
+                    return decimal.MinValue;
                 }
                 if (Convert.ToDouble(value) == 7.9228162514264338E+28)
                 {
-                    return System.Decimal.MaxValue;
+                    return decimal.MaxValue;
                 }
                 Convert.ToDecimal(value);
             }
-            else if (type == typeof(Int64))
+            else if (type == typeof(long))
             {
                 if (value is double)
                 {
                     if ((double)value == 9.2233720368547758E+18)
                     {
-                        return Int64.MaxValue;
+                        return long.MaxValue;
                     }
                 }
             }
-            else if (type == typeof(UInt64))
+            else if (type == typeof(ulong))
             {
                 if (value is double)
                 {
                     if ((double)value == 1.8446744073709552E+19)
                     {
-                        return UInt64.MaxValue;
+                        return ulong.MaxValue;
                     }
                 }
             }
@@ -746,23 +737,23 @@ namespace Gurux.Common.Internal
                     return null;
                 }
             }
-            else if (value is Int16)
+            else if (value is short)
             {
-                if ((Int16)value == 0)
+                if ((short)value == 0)
                 {
                     return null;
                 }
             }
-            else if (value is Int32)
+            else if (value is int)
             {
-                if ((Int32)value == 0)
+                if ((int)value == 0)
                 {
                     return null;
                 }
             }
-            else if (value is Int64)
+            else if (value is long)
             {
-                if ((Int64)value == 0)
+                if ((long)value == 0)
                 {
                     return null;
                 }
@@ -774,23 +765,23 @@ namespace Gurux.Common.Internal
                     return null;
                 }
             }
-            else if (value is UInt16)
+            else if (value is ushort)
             {
-                if ((UInt16)value == 0)
+                if ((ushort)value == 0)
                 {
                     return null;
                 }
             }
-            else if (value is UInt32)
+            else if (value is uint)
             {
-                if ((UInt32)value == 0)
+                if ((uint)value == 0)
                 {
                     return null;
                 }
             }
-            else if (value is UInt64)
+            else if (value is ulong)
             {
-                if ((UInt64)value == 0)
+                if ((ulong)value == 0)
                 {
                     return null;
                 }

@@ -73,7 +73,7 @@ namespace Gurux.DLMS
                                  bool numericsAsHex, bool hex, SortedList<string, int> list)
         {
             OutputType = type;
-            showNumericsAsHex = numericsAsHex;
+            showNumericsAsHex = type == TranslatorOutputType.SimpleXml && numericsAsHex;
             showStringAsHex = hex;
             settings.InterfaceType = InterfaceType.PDU;
             settings.Cipher = new GXCiphering(ASCIIEncoding.ASCII.GetBytes("ABCDEFGH"));
@@ -98,7 +98,7 @@ namespace Gurux.DLMS
             return short.Parse(value);
         }
 
-        public long ParseLong(String value)
+        public long ParseLong(string value)
         {
             if (showNumericsAsHex)
             {
@@ -107,13 +107,13 @@ namespace Gurux.DLMS
             return long.Parse(value);
         }
 
-        public UInt64 ParseULong(String value)
+        public ulong ParseULong(string value)
         {
             if (showNumericsAsHex)
             {
-                return UInt64.Parse(value, System.Globalization.NumberStyles.AllowHexSpecifier);
+                return ulong.Parse(value, System.Globalization.NumberStyles.AllowHexSpecifier);
             }
-            return UInt64.Parse(value);
+            return ulong.Parse(value);
         }
     }
 }

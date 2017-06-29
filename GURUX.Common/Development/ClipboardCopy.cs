@@ -36,8 +36,7 @@ namespace Gurux.Common
             }
             else
             {
-                ListView view = data as ListView;
-                if (view != null)
+                if (data is ListView view)
                 {
                     if (view.VirtualMode)
                     {
@@ -70,7 +69,7 @@ namespace Gurux.Common
                         }
                         str = sb.ToString();
                     }
-                }                
+                }
             }
             if (!string.IsNullOrEmpty(str))
             {

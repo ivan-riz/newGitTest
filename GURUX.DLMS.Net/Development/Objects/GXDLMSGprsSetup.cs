@@ -41,6 +41,7 @@ using System.Xml.Serialization;
 using Gurux.DLMS.ManufacturerSettings;
 using Gurux.DLMS.Internal;
 using Gurux.DLMS.Enums;
+using System.Xml;
 
 namespace Gurux.DLMS.Objects
 {
@@ -50,10 +51,8 @@ namespace Gurux.DLMS.Objects
         /// Constructor.
         /// </summary>
         public GXDLMSGprsSetup()
-        : base(ObjectType.GprsSetup)
+        : this("0.0.25.4.0.255", 0)
         {
-            DefaultQualityOfService = new GXDLMSQosElement();
-            RequestedQualityOfService = new GXDLMSQosElement();
         }
 
         /// <summary>
@@ -61,10 +60,8 @@ namespace Gurux.DLMS.Objects
         /// </summary>
         /// <param name="ln">Logical Name of the object.</param>
         public GXDLMSGprsSetup(string ln)
-        : base(ObjectType.GprsSetup, ln, 0)
+        : this(ln, 0)
         {
-            DefaultQualityOfService = new GXDLMSQosElement();
-            RequestedQualityOfService = new GXDLMSQosElement();
         }
 
         /// <summary>
@@ -87,7 +84,7 @@ namespace Gurux.DLMS.Objects
         }
 
         [XmlIgnore()]
-        public long PINCode
+        public ushort PINCode
         {
             get;
             set;
@@ -153,7 +150,7 @@ namespace Gurux.DLMS.Objects
         /// <inheritdoc cref="IGXDLMSBase.GetNames"/>
         string[] IGXDLMSBase.GetNames()
         {
-            return new string[] {Gurux.DLMS.Properties.Resources.LogicalNameTxt,
+            return new string[] {Internal.GXCommon.GetLogicalNameString(),
                              "APN", "PIN Code",
                              "Default Quality Of Service and Requested Quality Of Service"
                             };
@@ -195,11 +192,15 @@ namespace Gurux.DLMS.Objects
         {
             if (e.Index == 1)
             {
-                return this.LogicalName;
+                return GXCommon.LogicalNameToBytes(LogicalName);
             }
             if (e.Index == 2)
             {
-                return APN;
+                if (APN != null)
+                {
+                    return ASCIIEncoding.ASCII.GetBytes(APN);
+                }
+                return null;
             }
             if (e.Index == 3)
             {
@@ -229,6 +230,8 @@ namespace Gurux.DLMS.Objects
                     GXCommon.SetData(settings, data, DataType.UInt8, 0);
                     GXCommon.SetData(settings, data, DataType.UInt8, 0);
                 }
+                data.SetUInt8((byte)DataType.Structure);
+                data.SetUInt8((byte)5);
                 if (RequestedQualityOfService != null)
                 {
                     GXCommon.SetData(settings, data, DataType.UInt8, RequestedQualityOfService.Precedence);
@@ -255,14 +258,7 @@ namespace Gurux.DLMS.Objects
         {
             if (e.Index == 1)
             {
-                if (e.Value is string)
-                {
-                    LogicalName = e.Value.ToString();
-                }
-                else
-                {
-                    LogicalName = GXDLMSClient.ChangeType((byte[])e.Value, DataType.OctetString).ToString();
-                }
+                LogicalName = GXCommon.ToLogicalName(e.Value);
             }
             else if (e.Index == 2)
             {
@@ -272,12 +268,12 @@ namespace Gurux.DLMS.Objects
                 }
                 else
                 {
-                    APN = GXDLMSClient.ChangeType((byte[])e.Value, DataType.String).ToString();
+                    APN = ASCIIEncoding.ASCII.GetString((byte[])e.Value);
                 }
             }
             else if (e.Index == 3)
             {
-                PINCode = Convert.ToInt16(e.Value);
+                PINCode = Convert.ToUInt16(e.Value);
             }
             else if (e.Index == 4)
             {
@@ -285,23 +281,77 @@ namespace Gurux.DLMS.Objects
                 RequestedQualityOfService.Precedence = RequestedQualityOfService.Delay = RequestedQualityOfService.Reliability = RequestedQualityOfService.PeakThroughput = RequestedQualityOfService.MeanThroughput = 0;
                 if (e.Value != null)
                 {
-                    Object[] tmp = (Object[])e.Value;
-                    DefaultQualityOfService.Precedence = Convert.ToByte((tmp[0] as Object[])[0]);
-                    DefaultQualityOfService.Delay = Convert.ToByte((tmp[0] as Object[])[1]);
-                    DefaultQualityOfService.Reliability = Convert.ToByte((tmp[0] as Object[])[2]);
-                    DefaultQualityOfService.PeakThroughput = Convert.ToByte((tmp[0] as Object[])[3]);
-                    DefaultQualityOfService.MeanThroughput = Convert.ToByte((tmp[0] as Object[])[4]);
-                    RequestedQualityOfService.Precedence = Convert.ToByte((tmp[1] as Object[])[0]);
-                    RequestedQualityOfService.Delay = Convert.ToByte((tmp[1] as Object[])[1]);
-                    RequestedQualityOfService.Reliability = Convert.ToByte((tmp[1] as Object[])[2]);
-                    RequestedQualityOfService.PeakThroughput = Convert.ToByte((tmp[1] as Object[])[3]);
-                    RequestedQualityOfService.MeanThroughput = Convert.ToByte((tmp[1] as Object[])[4]);
+                    object[] tmp = (object[])e.Value;
+                    DefaultQualityOfService.Precedence = Convert.ToByte((tmp[0] as object[])[0]);
+                    DefaultQualityOfService.Delay = Convert.ToByte((tmp[0] as object[])[1]);
+                    DefaultQualityOfService.Reliability = Convert.ToByte((tmp[0] as object[])[2]);
+                    DefaultQualityOfService.PeakThroughput = Convert.ToByte((tmp[0] as object[])[3]);
+                    DefaultQualityOfService.MeanThroughput = Convert.ToByte((tmp[0] as object[])[4]);
+                    RequestedQualityOfService.Precedence = Convert.ToByte((tmp[1] as object[])[0]);
+                    RequestedQualityOfService.Delay = Convert.ToByte((tmp[1] as object[])[1]);
+                    RequestedQualityOfService.Reliability = Convert.ToByte((tmp[1] as object[])[2]);
+                    RequestedQualityOfService.PeakThroughput = Convert.ToByte((tmp[1] as object[])[3]);
+                    RequestedQualityOfService.MeanThroughput = Convert.ToByte((tmp[1] as object[])[4]);
                 }
             }
             else
             {
                 e.Error = ErrorCode.ReadWriteDenied;
             }
+        }
+
+        void IGXDLMSBase.Load(GXXmlReader reader)
+        {
+            APN = reader.ReadElementContentAsString("APN");
+            PINCode = (ushort)reader.ReadElementContentAsInt("PINCode");
+            if (reader.IsStartElement("DefaultQualityOfService", true))
+            {
+                DefaultQualityOfService.Precedence = (byte)reader.ReadElementContentAsInt("Precedence");
+                DefaultQualityOfService.Delay = (byte)reader.ReadElementContentAsInt("Delay");
+                DefaultQualityOfService.Reliability = (byte)reader.ReadElementContentAsInt("Reliability");
+                DefaultQualityOfService.PeakThroughput = (byte)reader.ReadElementContentAsInt("PeakThroughput");
+                DefaultQualityOfService.MeanThroughput = (byte)reader.ReadElementContentAsInt("MeanThroughput");
+                reader.ReadEndElement("DefaultQualityOfService");
+            }
+            if (reader.IsStartElement("RequestedQualityOfService", true))
+            {
+                RequestedQualityOfService.Precedence = (byte)reader.ReadElementContentAsInt("Precedence");
+                RequestedQualityOfService.Delay = (byte)reader.ReadElementContentAsInt("Delay");
+                RequestedQualityOfService.Reliability = (byte)reader.ReadElementContentAsInt("Reliability");
+                RequestedQualityOfService.PeakThroughput = (byte)reader.ReadElementContentAsInt("PeakThroughput");
+                RequestedQualityOfService.MeanThroughput = (byte)reader.ReadElementContentAsInt("MeanThroughput");
+                reader.ReadEndElement("DefaultQualityOfService");
+            }
+        }
+
+        void IGXDLMSBase.Save(GXXmlWriter writer)
+        {
+            writer.WriteElementString("APN", APN);
+            writer.WriteElementString("PINCode", PINCode);
+            if (DefaultQualityOfService != null)
+            {
+                writer.WriteStartElement("DefaultQualityOfService");
+                writer.WriteElementString("Precedence", DefaultQualityOfService.Precedence);
+                writer.WriteElementString("Delay", DefaultQualityOfService.Delay);
+                writer.WriteElementString("Reliability", DefaultQualityOfService.Reliability);
+                writer.WriteElementString("PeakThroughput", DefaultQualityOfService.PeakThroughput);
+                writer.WriteElementString("MeanThroughput", DefaultQualityOfService.MeanThroughput);
+                writer.WriteEndElement();
+            }
+            if (RequestedQualityOfService != null)
+            {
+                writer.WriteStartElement("RequestedQualityOfService");
+                writer.WriteElementString("Precedence", RequestedQualityOfService.Precedence);
+                writer.WriteElementString("Delay", RequestedQualityOfService.Delay);
+                writer.WriteElementString("Reliability", RequestedQualityOfService.Reliability);
+                writer.WriteElementString("PeakThroughput", RequestedQualityOfService.PeakThroughput);
+                writer.WriteElementString("MeanThroughput", RequestedQualityOfService.MeanThroughput);
+                writer.WriteEndElement();
+            }
+        }
+
+        void IGXDLMSBase.PostLoad(GXXmlReader reader)
+        {
         }
         #endregion
     }

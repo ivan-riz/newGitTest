@@ -61,6 +61,8 @@ namespace Gurux.DLMS
             int cnt = 0xFF;
             byte type = 0;
             List<ValueEventArgs> list = new List<ValueEventArgs>();
+            List<ValueEventArgs> reads = new List<ValueEventArgs>();
+            List<ValueEventArgs> actions = new List<ValueEventArgs>();
             //If get next frame.
             if (xml == null && data.Size == 0)
             {
@@ -78,8 +80,6 @@ namespace Gurux.DLMS
             else
             {
                 cnt = GXCommon.GetObjectCount(data);
-                List<ValueEventArgs> reads = new List<ValueEventArgs>();
-                List<ValueEventArgs> actions = new List<ValueEventArgs>();
                 if (xml != null)
                 {
                     xml.AppendStartTag(Command.ReadRequest, "Qty", xml.IntegerToHex(cnt, 2));
@@ -138,11 +138,22 @@ namespace Gurux.DLMS
             }
 
             byte requestType = (byte)GetReadData(settings, list.ToArray(), bb);
+
+            if (reads.Count != 0)
+            {
+                server.NotifyPostRead(reads.ToArray());
+            }
+
+            if (actions.Count != 0)
+            {
+                server.NotifyPostAction(actions.ToArray());
+            }
+
             GXDLMSSNParameters p = new GXDLMSSNParameters(settings, Command.ReadResponse, list.Count, requestType, null, bb);
             GXDLMS.GetSNPdu(p, replyData);
             if (server.transaction == null && (bb.Size != bb.Position || settings.Count != settings.Index))
             {
-                List<ValueEventArgs> reads = new List<ValueEventArgs>();
+                reads = new List<ValueEventArgs>();
                 foreach (var it in list)
                 {
                     reads.Add(it);
@@ -156,16 +167,9 @@ namespace Gurux.DLMS
             }
         }
 
-
         ///<summary>
         /// Handle write request.
         ///</summary>
-        ///<param name="Reply">
-        /// Received data from the client.
-        /// </param>
-        ///<returns>
-        /// Reply.
-        ///</returns>
         public static void HandleWriteRequest(GXDLMSSettings settings, GXDLMSServer server, GXByteBuffer data,
                                               GXByteBuffer replyData, GXDLMSTranslatorStructure xml)
         {
@@ -290,10 +294,11 @@ namespace Gurux.DLMS
                         DataType dt = target.Item.GetDataType(target.Index);
                         if (dt != DataType.None && dt != DataType.OctetString)
                         {
-                            value = GXDLMSClient.ChangeType((byte[])value, dt);
+                            value = GXDLMSClient.ChangeType((byte[])value, dt, settings.UseUtc2NormalTime);
                         }
                     }
-                    AccessMode am = target.Item.GetAccess(target.Index);
+                    ValueEventArgs e = new ValueEventArgs(server, target.Item, target.Index, 0, null);
+                    AccessMode am = server.NotifyGetAttributeAccess(e);
                     // If write is denied.
                     if (am != AccessMode.Write && am != AccessMode.ReadWrite)
                     {
@@ -301,7 +306,6 @@ namespace Gurux.DLMS
                     }
                     else
                     {
-                        ValueEventArgs e = new ValueEventArgs(settings, target.Item, target.Index, 0, null);
                         e.Value = value;
                         server.NotifyWrite(new ValueEventArgs[] { e });
                         if (e.Error != 0)
@@ -311,6 +315,7 @@ namespace Gurux.DLMS
                         else if (!e.Handled)
                         {
                             (target.Item as IGXDLMSBase).SetValue(settings, e);
+                            server.NotifyPostWrite(new ValueEventArgs[] { e });
                         }
                     }
                 }
@@ -332,7 +337,7 @@ namespace Gurux.DLMS
         /// <param name="replyData"></param>
         internal static void GenerateWriteResponse(GXDLMSSettings settings, GXByteBuffer results, GXByteBuffer replyData)
         {
-            GXByteBuffer bb = new GXByteBuffer((UInt16)(2 * results.Size));
+            GXByteBuffer bb = new GXByteBuffer((ushort)(2 * results.Size));
             byte ret;
             for (int pos = 0; pos != results.Size; ++pos)
             {
@@ -397,7 +402,7 @@ namespace Gurux.DLMS
             }
 
             GXSNInfo info = FindSNObject(server, sn & 0xFFFF);
-            ValueEventArgs e = new ValueEventArgs(settings, info.Item, info.Index, 0, null);
+            ValueEventArgs e = new ValueEventArgs(server, info.Item, info.Index, 0, null);
             e.action = info.IsAction;
             if (type == (byte)VariableAccessSpecification.ParameterisedAccess)
             {
@@ -412,13 +417,16 @@ namespace Gurux.DLMS
                               ServiceError.Service, (byte)Service.Unsupported));
                 return;
             }
-
+            if (e.Target is GXDLMSProfileGeneric && info.Index == 2)
+            {
+                e.RowToPdu = GXDLMS.RowsToPdu(settings, (GXDLMSProfileGeneric)e.Target);
+            }
             list.Add(e);
-            if (!e.action && info.Item.GetAccess(info.Index) == AccessMode.NoAccess)
+            if (!e.action && server.NotifyGetAttributeAccess(e) == AccessMode.NoAccess)
             {
                 e.Error = ErrorCode.ReadWriteDenied;
             }
-            else if (e.action && info.Item.GetMethodAccess(info.Index) == MethodAccessMode.NoAccess)
+            else if (e.action && server.NotifyGetMethodAccess(e) == MethodAccessMode.NoAccess)
             {
                 e.Error = ErrorCode.ReadWriteDenied;
             }
@@ -441,7 +449,7 @@ namespace Gurux.DLMS
         /// <param name="data">Received data.</param>
         private static void HandleReadBlockNumberAccess(GXDLMSSettings settings, GXDLMSServer server, GXByteBuffer data, GXByteBuffer replyData, GXDLMSTranslatorStructure xml)
         {
-            UInt16 blockNumber = data.GetUInt16();
+            ushort blockNumber = data.GetUInt16();
             if (xml != null)
             {
                 xml.AppendStartTag(Command.ReadRequest, VariableAccessSpecification.BlockNumberAccess);
@@ -484,6 +492,15 @@ namespace Gurux.DLMS
                     server.NotifyAction(actions.ToArray());
                 }
                 GetReadData(settings, server.transaction.targets, server.transaction.data);
+                if (reads.Count != 0)
+                {
+                    server.NotifyPostRead(reads.ToArray());
+                }
+
+                if (actions.Count != 0)
+                {
+                    server.NotifyPostAction(actions.ToArray());
+                }
             }
             settings.IncreaseBlockIndex();
             GXDLMSSNParameters p = new GXDLMSSNParameters(settings, Command.ReadResponse, 1,
@@ -508,7 +525,7 @@ namespace Gurux.DLMS
         {
             GXByteBuffer bb = new GXByteBuffer();
             byte lastBlock = data.GetUInt8();
-            UInt16 blockNumber = data.GetUInt16();
+            ushort blockNumber = data.GetUInt16();
             if (xml != null)
             {
                 if (command == Command.WriteResponse)
@@ -602,7 +619,6 @@ namespace Gurux.DLMS
         internal static GXSNInfo FindSNObject(GXDLMSObjectCollection items, int sn)
         {
             GXSNInfo i = new GXSNInfo();
-            int offset, count;
             foreach (GXDLMSObject it in items)
             {
                 if (sn >= it.ShortName)
@@ -618,7 +634,7 @@ namespace Gurux.DLMS
                     else
                     {
                         //If method is accessed.
-                        GXDLMS.GetActionInfo(it.ObjectType, out offset, out count);
+                        GXDLMS.GetActionInfo(it.ObjectType, out int offset, out int count);
                         if (sn < it.ShortName + offset + (8 * count))
                         {
                             i.Item = it;

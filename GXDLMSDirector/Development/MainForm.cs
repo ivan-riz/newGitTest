@@ -1551,6 +1551,63 @@ namespace GXDLMSDirector
                     else if (this.ObjectTree.SelectedNode.Tag is GXDLMSObjectCollection)
                     {
                         GXDLMSObjectCollection objects = (GXDLMSObjectCollection)this.ObjectTree.SelectedNode.Tag;
+                        GXDLMSDevice dev = objects.Tag as GXDLMSDevice;
+                        dev.KeepAliveStop();
+                        OnProgress(dev, "Writing...", 0, 1);
+                        foreach (GXDLMSObject obj in objects)
+                        {
+                            dev.Comm.Write(obj, obj, 0, new List<object>());
+                        }
+                        dev.KeepAliveStart();
+
+                        //objects.ToList().ForEach(o => WriteObject(o));
+
+                        foreach (GXDLMSObject obj in objects)
+                        {
+                            WriteObject(obj);
+                        }
+                    }
+                    else if (this.ObjectTree.SelectedNode.Tag is GXDLMSObject)
+                    {
+                        GXDLMSObject obj = (GXDLMSObject)this.ObjectTree.SelectedNode.Tag;
+                        //WriteObject(obj);
+                        GXDLMSDevice dev = obj.Parent.Tag as GXDLMSDevice;
+                        dev.KeepAliveStop();
+                        OnProgress(dev, "Writing...", 0, 1);
+                        dev.Comm.Write(obj, obj, 0, new List<object>());
+                        dev.KeepAliveStart();
+                    }
+                }
+            }
+            catch (Exception Ex)
+            {
+                GXDLMS.Common.Error.ShowError(this, Ex);
+            }
+            finally
+            {
+                UpdateTransaction(false);
+            }
+        }
+
+        private void WriteMnu_Click_(object sender, EventArgs e)
+        {
+            try
+            {
+                UpdateTransaction(true);
+                if (this.ObjectTree.SelectedNode != null)
+                {
+                    //Read all objects if device is selected.
+                    if (this.ObjectTree.SelectedNode.Tag is GXDLMSDeviceCollection)
+                    {
+                        throw new Exception("Only objects can be write, not whole devices.");
+                    }
+                    else if (this.ObjectTree.SelectedNode.Tag is GXDLMSDevice)
+                    {
+                        throw new Exception("Only objects can be write, not whole devices.");
+                    }
+                    else if (this.ObjectTree.SelectedNode.Tag is GXDLMSObjectCollection)
+                    {
+                        GXDLMSObjectCollection objects = (GXDLMSObjectCollection)this.ObjectTree.SelectedNode.Tag;
                         //GXDLMSDevice dev = objects.Tag as GXDLMSDevice;
                         //dev.KeepAliveStop();
                         //OnProgress(dev, "Writing...", 0, 1);

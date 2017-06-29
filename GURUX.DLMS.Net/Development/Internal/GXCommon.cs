@@ -39,6 +39,7 @@ using System.Text;
 using Gurux.DLMS.Enums;
 using System.Diagnostics;
 using Gurux.DLMS.Objects;
+using System.Xml;
 
 namespace Gurux.DLMS.Internal
 {
@@ -50,8 +51,8 @@ namespace Gurux.DLMS.Internal
         internal const byte HDLCFrameStartEnd = 0x7E;
         internal static readonly byte[] LogicalNameObjectID = { 0x60, 0x85, 0x74, 0x05, 0x08, 0x01, 0x01 };
         internal static readonly byte[] ShortNameObjectID = { 0x60, 0x85, 0x74, 0x05, 0x08, 0x01, 0x02 };
-        internal static readonly byte[] LogicalNameObjectIdWithCiphering = { 0x60, (byte)0x85, 0x74, 0x05, 0x08, 0x01, 0x03 };
-        internal static readonly byte[] ShortNameObjectIdWithCiphering = { 0x60, (byte)0x85, 0x74, 0x05, 0x08, 0x01, 0x04 };
+        internal static readonly byte[] LogicalNameObjectIdWithCiphering = { 0x60, 0x85, 0x74, 0x05, 0x08, 0x01, 0x03 };
+        internal static readonly byte[] ShortNameObjectIdWithCiphering = { 0x60, 0x85, 0x74, 0x05, 0x08, 0x01, 0x04 };
 
         /// <summary>
         /// Sent LLC bytes.
@@ -62,21 +63,21 @@ namespace Gurux.DLMS.Internal
         /// </summary>
         internal static readonly byte[] LLCReplyBytes = { 0xE6, 0xE7, 0x00 };
 
-        public static byte GetSize(Object value)
+        public static byte GetSize(object value)
         {
             if (value is byte)
             {
                 return 1;
             }
-            if (value is UInt16)
+            if (value is ushort)
             {
                 return 2;
             }
-            if (value is UInt32)
+            if (value is uint)
             {
                 return 4;
             }
-            if (value is UInt64)
+            if (value is ulong)
             {
                 return 8;
             }
@@ -124,7 +125,7 @@ namespace Gurux.DLMS.Internal
         [DebuggerStepThrough]
         public static byte[] HexToBytes(string value)
         {
-            if (String.IsNullOrEmpty(value))
+            if (string.IsNullOrEmpty(value))
             {
                 return new byte[0];
             }
@@ -222,40 +223,9 @@ namespace Gurux.DLMS.Internal
         }
 
         /// <summary>
-        /// Reserved for internal use.
-        /// </summary>
-        /// <param name="value"></param>
-        /// <param name="BitMask"></param>
-        /// <param name="val"></param>
-        internal static void SetBits(ref byte value, byte BitMask, bool val)
-        {
-            value &= (byte)~BitMask;
-            //Set bit.
-            if (val)
-            {
-                value |= BitMask;
-            }
-            else //Clear bit.
-            {
-                value &= (byte)~BitMask;
-            }
-        }
-
-        /// <summary>
-        /// Is bit set.
-        /// </summary>
-        /// <param name="value"></param>
-        /// <param name="BitMask"></param>
-        /// <returns></returns>
-        internal static bool GetBits(byte value, int BitMask)
-        {
-            return (value & BitMask) != 0;
-        }
-
-        /// <summary>
         /// Get HDLC address from byte array.
         /// </summary>
-        /// <param name="GXByteBuffer">Byte array.</param>
+        /// <param name="buff">Byte array.</param>
         /// <returns>HDLC address.</returns>
         public static int GetHDLCAddress(GXByteBuffer buff)
         {
@@ -280,28 +250,12 @@ namespace Gurux.DLMS.Internal
             }
             else if (size == 4)
             {
-                UInt32 tmp = buff.GetUInt32();
+                uint tmp = buff.GetUInt32();
                 tmp = ((tmp & 0xFE) >> 1) | ((tmp & 0xFE00) >> 2)
                       | ((tmp & 0xFE0000) >> 3) | ((tmp & 0xFE000000) >> 4);
                 return (int)tmp;
             }
             throw new ArgumentException("Wrong size.");
-        }
-
-        internal byte[] GetLogicalName(string logicalName)
-        {
-            byte[] ln = new byte[6];
-            string[] items = logicalName.Split('.');
-            if (items.Length != 6)
-            {
-                throw new Exception("Invalid Logical name.");
-            }
-            int pos = -1;
-            foreach (string it in items)
-            {
-                ln[++pos] = byte.Parse(it);
-            }
-            return ln;
         }
 
         /// <summary>
@@ -367,12 +321,12 @@ namespace Gurux.DLMS.Internal
             else if (count < 0x10000)
             {
                 buff.SetUInt8(0x82);
-                buff.SetUInt16((UInt16)count);
+                buff.SetUInt16((ushort)count);
             }
             else
             {
                 buff.SetUInt8(0x84);
-                buff.SetUInt32((UInt32)count);
+                buff.SetUInt32((uint)count);
             }
         }
 
@@ -503,7 +457,7 @@ namespace Gurux.DLMS.Internal
             {
                 case DataType.Array:
                 case DataType.Structure:
-                    value = GetArray(data, info, startIndex);
+                    value = GetArray(settings, data, info, startIndex);
                     break;
                 case DataType.Boolean:
                     value = GetBoolean(data, info);
@@ -524,7 +478,7 @@ namespace Gurux.DLMS.Internal
                     value = GetUtfString(data, info, knownType);
                     break;
                 case DataType.OctetString:
-                    value = GetOctetString(data, info, knownType);
+                    value = GetOctetString(settings, data, info, knownType);
                     break;
                 case DataType.Bcd:
                     value = GetBcd(data, info, knownType);
@@ -587,7 +541,7 @@ namespace Gurux.DLMS.Internal
         ///</param>
         ///<returns>Object array.
         ///</returns>
-        private static object GetArray(GXByteBuffer buff, GXDataInfo info, int index)
+        private static object GetArray(GXDLMSSettings settings, GXByteBuffer buff, GXDataInfo info, int index)
         {
             object value;
             if (info.Count == 0)
@@ -613,10 +567,10 @@ namespace Gurux.DLMS.Internal
             {
                 GXDataInfo info2 = new GXDataInfo();
                 info2.xml = info.xml;
-                object tmp = GetData(null, buff, info2);
+                object tmp = GetData(settings, buff, info2);
                 if (!info2.Complete)
                 {
-                    buff.Position = (UInt16)startIndex;
+                    buff.Position = startIndex;
                     info.Complete = false;
                     break;
                 }
@@ -853,11 +807,18 @@ namespace Gurux.DLMS.Internal
                 }
                 int deviation = buff.GetInt16();
                 dt.Status = (ClockStatus)buff.GetUInt8();
-                if (settings != null && settings.UtcTimeZone)
+                if (deviation != -32768 && (dt.Status & ClockStatus.DaylightSavingActive) != 0)
+                {
+#if !WINDOWS_UWP
+                    deviation -= (int)TimeZone.CurrentTimeZone.GetDaylightChanges(year).Delta.TotalMinutes;
+#else
+                    deviation -= 60;
+#endif
+                }
+                if (settings != null && settings.UseUtc2NormalTime)
                 {
                     deviation = -deviation;
                 }
-                dt.Deviation = deviation;
                 //0x8000 == -32768
                 //deviation = -1 if skipped.
                 if (deviation != -1 && deviation != -32768 && year != 1 && (dt.Skip & DateTimeSkips.Year) == 0)
@@ -867,7 +828,7 @@ namespace Gurux.DLMS.Internal
                 }
                 else //Use current time if deviation is not defined.
                 {
-                    dt.Skip |= DateTimeSkips.Devitation;
+                    dt.Skip |= DateTimeSkips.Deviation;
                     DateTime tmp = new DateTime(year, month, day, hours, minutes, seconds, milliseconds, DateTimeKind.Local);
                     dt.Value = new DateTimeOffset(tmp, TimeZoneInfo.Local.GetUtcOffset(tmp));
                 }
@@ -999,7 +960,7 @@ namespace Gurux.DLMS.Internal
                 info.Complete = false;
                 return null;
             }
-            UInt64 value = buff.GetUInt64();
+            ulong value = buff.GetUInt64();
             if (info.xml != null)
             {
                 info.xml.AppendLine(info.xml.GetDataType(info.Type), "Value", info.xml.IntegerToHex(value));
@@ -1027,7 +988,7 @@ namespace Gurux.DLMS.Internal
                 info.Complete = false;
                 return null;
             }
-            Int64 value = buff.GetInt64();
+            long value = buff.GetInt64();
             if (info.xml != null)
             {
                 info.xml.AppendLine(info.xml.GetDataType(info.Type), "Value", info.xml.IntegerToHex(value, 16));
@@ -1055,7 +1016,7 @@ namespace Gurux.DLMS.Internal
                 info.Complete = false;
                 return null;
             }
-            UInt16 value = buff.GetUInt16();
+            ushort value = buff.GetUInt16();
             if (info.xml != null)
             {
                 info.xml.AppendLine(info.xml.GetDataType(info.Type), "Value", info.xml.IntegerToHex(value, 4));
@@ -1111,7 +1072,7 @@ namespace Gurux.DLMS.Internal
                 info.Complete = false;
                 return null;
             }
-            Int16 value = buff.GetInt16();
+            short value = buff.GetInt16();
             if (info.xml != null)
             {
                 info.xml.AppendLine(info.xml.GetDataType(info.Type), "Value", info.xml.IntegerToHex(value, 4));
@@ -1220,6 +1181,61 @@ namespace Gurux.DLMS.Internal
             return value;
         }
 
+        /// <summary>
+        /// Reserved for internal use.
+        /// </summary>
+        /// <param name="value"></param>
+        /// <returns>Logical name as a string.</returns>
+        internal static string ToLogicalName(object value)
+        {
+            if (value is byte[] buff)
+            {
+                if (buff.Length == 0)
+                {
+                    buff = new byte[6];
+                }
+                if (buff.Length == 6)
+                {
+                    return (buff[0] & 0xFF) + "." + (buff[1] & 0xFF) + "." + (buff[2] & 0xFF) + "." +
+                           (buff[3] & 0xFF) + "." + (buff[4] & 0xFF) + "." + (buff[5] & 0xFF);
+                }
+#if !WINDOWS_UWP
+                throw new ArgumentException(Properties.Resources.InvalidLogicalName);
+#else
+                var loader = new Windows.ApplicationModel.Resources.ResourceLoader();
+                throw new ArgumentException(loader.GetString("InvalidLogicalName"));
+#endif
+            }
+            return Convert.ToString(value);
+        }
+
+        internal static byte[] LogicalNameToBytes(string value)
+        {
+            if (string.IsNullOrEmpty(value))
+            {
+                return new byte[6];
+            }
+            string[] items = value.Split('.');
+            // If data is string.
+            if (items.Length != 6)
+            {
+#if !WINDOWS_UWP
+                throw new ArgumentException(Properties.Resources.InvalidLogicalName);
+#else
+                var loader = new Windows.ApplicationModel.Resources.ResourceLoader();
+                throw new ArgumentException(loader.GetString("InvalidLogicalName"));
+#endif
+            }
+            byte[] buff = new byte[6];
+            byte pos = 0;
+            foreach (string it in items)
+            {
+                buff[pos] = Convert.ToByte(it);
+                ++pos;
+            }
+            return buff;
+        }
+
         ///<summary>
         ///Get octect string value from DLMS data.
         ///</summary>
@@ -1232,7 +1248,7 @@ namespace Gurux.DLMS.Internal
         ///<returns>
         ///Parsed octet string value.
         ///</returns>
-        private static object GetOctetString(GXByteBuffer buff, GXDataInfo info, bool knownType)
+        private static object GetOctetString(GXDLMSSettings settings, GXByteBuffer buff, GXDataInfo info, bool knownType)
         {
             object value;
             int len;
@@ -1255,22 +1271,52 @@ namespace Gurux.DLMS.Internal
             value = tmp;
             if (info.xml != null)
             {
-                if (info.xml.Comments)
+                if (info.xml.Comments && tmp.Length != 0)
                 {
                     // This might be logical name.
                     if (tmp.Length == 6 && tmp[5] == 0xFF)
                     {
-                        info.xml.AppendComment(GXDLMSObject.ToLogicalName(tmp));
+                        info.xml.AppendComment(GXCommon.ToLogicalName(tmp));
                     }
-                    else if (tmp.Length != 0)
+                    else
                     {
                         bool isString = true;
-                        foreach (char it in tmp)
+                        //Try to move octect string to DateTie, Date or time.
+                        if (tmp.Length == 12 || tmp.Length == 5 || tmp.Length == 4)
                         {
-                            if (!char.IsLetterOrDigit(it))
+                            try
                             {
+                                DataType type;
+                                if (tmp.Length == 12)
+                                {
+                                    type = DataType.DateTime;
+                                }
+                                else if (tmp.Length == 5)
+                                {
+                                    type = DataType.Date;
+                                }
+                                else //if (tmp.Length == 4)
+                                {
+                                    type = DataType.Time;
+                                }
+                                object dt = GXDLMSClient.ChangeType(tmp, type, settings.UseUtc2NormalTime);
+                                info.xml.AppendComment(dt.ToString());
                                 isString = false;
-                                break;
+                            }
+                            catch (Exception)
+                            {
+                                isString = true;
+                            }
+                        }
+                        if (isString)
+                        {
+                            foreach (char it in tmp)
+                            {
+                                if (it == 0xFF || !char.IsLetterOrDigit(it))
+                                {
+                                    isString = false;
+                                    break;
+                                }
                             }
                         }
                         if (isString)
@@ -1356,7 +1402,7 @@ namespace Gurux.DLMS.Internal
                 info.Complete = false;
                 return null;
             }
-            UInt32 value = buff.GetUInt32();
+            uint value = buff.GetUInt32();
             if (info.xml != null)
             {
                 info.xml.AppendLine(info.xml.GetDataType(info.Type), "Value", value);
@@ -1384,7 +1430,7 @@ namespace Gurux.DLMS.Internal
                 info.Complete = false;
                 return null;
             }
-            Int32 value = buff.GetInt32();
+            int value = buff.GetInt32();
             if (info.xml != null)
             {
                 info.xml.AppendLine(info.xml.GetDataType(info.Type), "Value", value);
@@ -1461,6 +1507,74 @@ namespace Gurux.DLMS.Internal
             return value != 0;
         }
 
+        /// <summary>
+        /// Get data type in bytes.
+        /// </summary>
+        /// <param name="type">Data type.</param>
+        /// <returns>Size of data type in bytes.</returns>
+        public static int GetDataTypeSize(DataType type)
+        {
+            int size = -1;
+            switch (type)
+            {
+                case DataType.Bcd:
+                    size = 1;
+                    break;
+                case DataType.Boolean:
+                    size = 1;
+                    break;
+                case DataType.Date:
+                    size = 5;
+                    break;
+                case DataType.DateTime:
+                    size = 12;
+                    break;
+                case DataType.Enum:
+                    size = 1;
+                    break;
+                case DataType.Float32:
+                    size = 4;
+                    break;
+                case DataType.Float64:
+                    size = 8;
+                    break;
+                case DataType.Int16:
+                    size = 2;
+                    break;
+                case DataType.Int32:
+                    size = 4;
+                    break;
+                case DataType.Int64:
+                    size = 8;
+                    break;
+                case DataType.Int8:
+                    size = 1;
+                    break;
+                case DataType.None:
+                    size = 0;
+                    break;
+                case DataType.Time:
+                    size = 4;
+                    break;
+                case DataType.UInt16:
+                    size = 2;
+                    break;
+                case DataType.UInt32:
+                    size = 4;
+                    break;
+                case DataType.UInt64:
+                    size = 8;
+                    break;
+                case DataType.UInt8:
+                    size = 1;
+                    break;
+                default:
+                    break;
+            }
+            return size;
+        }
+
+
         public static DataType GetValueType(object value)
         {
             if (value == null)
@@ -1471,10 +1585,17 @@ namespace Gurux.DLMS.Internal
             {
                 return DataType.OctetString;
             }
+#if !WINDOWS_UWP
             if (value.GetType().IsEnum)
             {
                 return DataType.Enum;
             }
+#else
+            if (value is Enum)
+            {
+                return DataType.Enum;
+            }
+#endif
             if (value is byte)
             {
                 return DataType.UInt8;
@@ -1483,27 +1604,27 @@ namespace Gurux.DLMS.Internal
             {
                 return DataType.Int8;
             }
-            if (value is UInt16)
+            if (value is ushort)
             {
                 return DataType.UInt16;
             }
-            if (value is Int16)
+            if (value is short)
             {
                 return DataType.Int16;
             }
-            if (value is UInt32)
+            if (value is uint)
             {
                 return DataType.UInt32;
             }
-            if (value is Int32)
+            if (value is int)
             {
                 return DataType.Int32;
             }
-            if (value is UInt64)
+            if (value is ulong)
             {
                 return DataType.UInt64;
             }
-            if (value is Int64)
+            if (value is long)
             {
                 return DataType.Int64;
             }
@@ -1580,27 +1701,34 @@ namespace Gurux.DLMS.Internal
                     buff.SetUInt8(Convert.ToByte(value));
                     break;
                 case DataType.Int16:
-                    if (value is UInt16)
+                    if (value is ushort)
                     {
-                        buff.SetUInt16((UInt16)value);
+                        buff.SetUInt16((ushort)value);
                     }
                     else
                     {
-                        buff.SetUInt16((UInt16)(Convert.ToInt16(value) & 0xFFFF));
+                        int v = Convert.ToInt32(value);
+                        if (v == 0x8000)
+                        {
+                            buff.SetUInt16(0x8000);
+                        }
+                        else
+                        {
+                            buff.SetInt16((short)v);
+                        }
                     }
                     break;
                 case DataType.UInt16:
                     buff.SetUInt16(Convert.ToUInt16(value));
                     break;
                 case DataType.Int32:
-                    buff.SetUInt32((UInt32)Convert.ToInt32(value));
+                    buff.SetUInt32((uint)Convert.ToInt32(value));
                     break;
                 case DataType.UInt32:
-
                     buff.SetUInt32(Convert.ToUInt32(value));
                     break;
                 case DataType.Int64:
-                    buff.SetUInt64((UInt64)Convert.ToInt64(value));
+                    buff.SetUInt64((ulong)Convert.ToInt64(value));
                     break;
                 case DataType.UInt64:
                     buff.SetUInt64(Convert.ToUInt64(value));
@@ -1777,7 +1905,7 @@ namespace Gurux.DLMS.Internal
             }
             else
             {
-                buff.SetUInt16((UInt16)dt.Value.Year);
+                buff.SetUInt16((ushort)dt.Value.Year);
             }
             // Add month
             if (dt.DaylightSavingsBegin)
@@ -1949,29 +2077,38 @@ namespace Gurux.DLMS.Internal
                 buff.SetUInt8((byte)0xFF); //Hundredths of second is not used.
             }
             //Add deviation.
-            if ((dt.Skip & DateTimeSkips.Devitation) == 0)
+            if ((dt.Skip & DateTimeSkips.Deviation) == 0)
             {
-                if (settings != null && settings.UtcTimeZone)
+                short deviation = (short)dt.Value.Offset.TotalMinutes;
+                if (dt.Value.LocalDateTime.IsDaylightSavingTime())
                 {
-                    buff.SetInt16((Int16)(dt.Value.Offset.TotalMinutes));
+#if !WINDOWS_UWP
+                    deviation -= (short)TimeZone.CurrentTimeZone.GetDaylightChanges(tm.Year).Delta.TotalMinutes;
+#else
+                    deviation -= 60;
+#endif
+                }
+                if (settings != null && settings.UseUtc2NormalTime)
+                {
+                    buff.SetInt16(deviation);
                 }
                 else
                 {
-                    buff.SetInt16((Int16)(-dt.Value.Offset.TotalMinutes));
+                    buff.SetInt16((short)(-deviation));
                 }
             }
-            else //deviation not used.
+            else //deviation not used  .
             {
                 buff.SetUInt16(0x8000);
             }
             //Add clock_status
-            if (dt.Value.LocalDateTime.IsDaylightSavingTime())
-            {
-                buff.SetUInt8((byte)(dt.Status | ClockStatus.DaylightSavingActive));
-            }
-            else
+            if ((dt.Skip & DateTimeSkips.Status) == 0)
             {
                 buff.SetUInt8((byte)dt.Status);
+            }
+            else //Status is not used.
+            {
+                buff.SetUInt8((byte)0xFF);
             }
         }
 
@@ -2027,26 +2164,11 @@ namespace Gurux.DLMS.Internal
         ///</param>
         private static void SetOctetString(GXByteBuffer buff, object value)
         {
-            // Example Logical name is octet string, so do not change to
-            // string...
             if (value is string)
             {
-                string[] items = ((string)value).Split('.');
-                // If data is string.
-                if (items.Length == 1)
-                {
-                    byte[] tmp = ASCIIEncoding.ASCII.GetBytes((string)value);
-                    SetObjectCount(tmp.Length, buff);
-                    buff.Set(tmp);
-                }
-                else
-                {
-                    SetObjectCount(items.Length, buff);
-                    foreach (string it in items)
-                    {
-                        buff.SetUInt8(Convert.ToByte(it));
-                    }
-                }
+                byte[] tmp = GXCommon.HexToBytes((string)value);
+                SetObjectCount(tmp.Length, buff);
+                buff.Set(tmp);
             }
             else if (value is sbyte[])
             {
@@ -2118,7 +2240,7 @@ namespace Gurux.DLMS.Internal
         ///<param name="value">
         ///Added value.
         ///</param>
-        private static void SetBitString(GXByteBuffer buff, object value)
+        internal static void SetBitString(GXByteBuffer buff, object value)
         {
             if (value is string)
             {
@@ -2161,7 +2283,7 @@ namespace Gurux.DLMS.Internal
             else if (value is sbyte[])
             {
                 byte[] arr = (byte[])value;
-                SetObjectCount(arr.Length, buff);
+                SetObjectCount(8 * arr.Length, buff);
                 buff.Set(arr);
             }
             else if (value == null)
@@ -2172,6 +2294,167 @@ namespace Gurux.DLMS.Internal
             {
                 throw new Exception("BitString must give as string.");
             }
+        }
+
+        /// <summary>
+        /// Get Logical name test from properties.
+        /// </summary>
+        /// <returns></returns>
+        public static string GetLogicalNameString()
+        {
+#if !WINDOWS_UWP
+            return Gurux.DLMS.Properties.Resources.LogicalNameTxt;
+#else
+            var loader = new Windows.ApplicationModel.Resources.ResourceLoader();
+            return loader.GetString("LogicalNameTxt");
+#endif
+        }
+
+#if WINDOWS_UWP
+        public static string GetDateSeparator()
+        {
+            return "-";
+        }
+        public static string GetTimeSeparator()
+        {
+            return ":";
+        }
+#endif
+
+        /// <summary>
+        /// Convert DLMS data type to .Net data type.
+        /// </summary>
+        /// <param name="type"></param>
+        /// <returns></returns>
+        static public Type GetDataType(DataType type)
+        {
+            switch (type)
+            {
+                case DataType.None:
+                    return null;
+                case DataType.Array:
+                case DataType.CompactArray:
+                case DataType.Structure:
+                    return typeof(object[]);
+                case DataType.Bcd:
+                    return typeof(string);
+                case DataType.BitString:
+                    return typeof(string);
+                case DataType.Boolean:
+                    return typeof(bool);
+                case DataType.Date:
+                    return typeof(DateTime);
+                case DataType.DateTime:
+                    return typeof(DateTime);
+                case DataType.Float32:
+                    return typeof(float);
+                case DataType.Float64:
+                    return typeof(double);
+                case DataType.Int16:
+                    return typeof(short);
+                case DataType.Int32:
+                    return typeof(int);
+                case DataType.Int64:
+                    return typeof(long);
+                case DataType.Int8:
+                    return typeof(sbyte);
+                case DataType.OctetString:
+                    return typeof(byte[]);
+                case DataType.String:
+                    return typeof(string);
+                case DataType.Time:
+                    return typeof(DateTime);
+                case DataType.UInt16:
+                    return typeof(ushort);
+                case DataType.UInt32:
+                    return typeof(uint);
+                case DataType.UInt64:
+                    return typeof(ulong);
+                case DataType.UInt8:
+                    return typeof(byte);
+                default:
+                case DataType.Enum:
+                    break;
+            }
+            throw new Exception("Invalid DLMS data type.");
+        }
+
+        static public DataType GetDLMSDataType(Type type)
+        {
+            //If expected type is not given return property type.
+            if (type == null)
+            {
+                return DataType.None;
+            }
+            if (type == typeof(int))
+            {
+                return DataType.Int32;
+            }
+            if (type == typeof(uint))
+            {
+                return DataType.UInt32;
+            }
+            if (type == typeof(string))
+            {
+                return DataType.String;
+            }
+            if (type == typeof(byte))
+            {
+                return DataType.UInt8;
+            }
+            if (type == typeof(sbyte))
+            {
+                return DataType.Int8;
+            }
+            if (type == typeof(short))
+            {
+                return DataType.Int16;
+            }
+            if (type == typeof(ushort))
+            {
+                return DataType.UInt16;
+            }
+            if (type == typeof(long))
+            {
+                return DataType.Int64;
+            }
+            if (type == typeof(ulong))
+            {
+                return DataType.UInt64;
+            }
+            if (type == typeof(float))
+            {
+                return DataType.Float32;
+            }
+            if (type == typeof(double))
+            {
+                return DataType.Float64;
+            }
+            if (type == typeof(DateTime))
+            {
+                return DataType.DateTime;
+            }
+            if (type == typeof(GXDate))
+            {
+                return DataType.Date;
+            }
+            if (type == typeof(GXTime))
+            {
+                return DataType.Time;
+            }
+            if (type == typeof(bool) || type == typeof(bool))
+            {
+                return DataType.Boolean;
+            }
+            if (type == typeof(byte[]))
+            {
+                return DataType.OctetString;
+            }
+            if (type == typeof(object[]))
+            {
+                return DataType.Array;
+            }
+            throw new Exception("Failed to convert data type to DLMS data type. Unknown data type.");
         }
     }
 }

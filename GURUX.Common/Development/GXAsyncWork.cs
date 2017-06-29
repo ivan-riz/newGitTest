@@ -197,10 +197,7 @@ namespace Gurux.Common
                 Result = null;
                 IsCanceled = false;
                 Done.Reset();
-                if (OnAsyncStateChangeEventHandler != null)
-                {
-                    OnAsyncStateChangeEventHandler(Sender, this, Parameters, AsyncState.Start, Text);
-                }
+                OnAsyncStateChangeEventHandler?.Invoke(Sender, this, Parameters, AsyncState.Start, Text);
                 Thread = new Thread(new ThreadStart(Run));
                 Thread.IsBackground = true;
                 Thread.Start();
@@ -217,10 +214,7 @@ namespace Gurux.Common
                 if (IsRunning)
                 {
                     IsCanceled = true;
-                    if (OnAsyncStateChangeEventHandler != null)
-                    {
-                        OnAsyncStateChangeEventHandler(Sender, this, Parameters, AsyncState.Cancel, null);
-                    }
+                    OnAsyncStateChangeEventHandler?.Invoke(Sender, this, Parameters, AsyncState.Cancel, null);
                 }
             }
             catch (Exception ex)

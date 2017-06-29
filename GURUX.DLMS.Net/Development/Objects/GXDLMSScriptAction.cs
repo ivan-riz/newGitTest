@@ -90,7 +90,7 @@ namespace Gurux.DLMS.Objects
         /// <summary>
         /// Parameter is service spesific.
         /// </summary>
-        public Object Parameter
+        public object Parameter
         {
             get;
             set;

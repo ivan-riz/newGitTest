@@ -105,7 +105,7 @@ namespace Gurux.DLMS.Objects
         /// <summary>
         /// Days of the week on which the entry is valid.
         /// </summary>
-        public String ExecWeekdays
+        public string ExecWeekdays
         {
             get;
             set;
@@ -114,7 +114,7 @@ namespace Gurux.DLMS.Objects
         /// <summary>
         /// Perform the link to the IC �Special days table�, day_id.
         /// </summary>
-        public String ExecSpecDays
+        public string ExecSpecDays
         {
             get;
             set;

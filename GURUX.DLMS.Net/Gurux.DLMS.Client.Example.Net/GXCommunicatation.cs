@@ -34,10 +34,8 @@
 
 using System;
 using System.Collections.Generic;
-using System.Linq;
 using System.Text;
 using Gurux.Common;
-using Gurux.DLMS;
 using Gurux.Net;
 using Gurux.Serial;
 using System.IO.Ports;
@@ -284,28 +282,25 @@ namespace Gurux.DLMS.Client.Example
                     WriteTrace("<- " + DateTime.Now.ToLongTimeString() + "\t" + GXCommon.ToHex(arr, true));
                     Media.Send(arr, null);
                     p.Reply = null;
-                    if (!Media.Receive(p))
+
+                    p.WaitTime = 2000;
+                    //Note! All meters do not echo this.
+                    Media.Receive(p);
+                    if (p.Reply != null)
                     {
-                        //Try to move away from mode E.
-                        GXReplyData reply = new GXReplyData();
-                        ReadDLMSPacket(Client.DisconnectRequest(), reply);
-                        data = "Failed to receive reply from the device in given time.";
-                        Console.WriteLine(data);
-                        throw new Exception(data);
+                        WriteTrace("-> " + DateTime.Now.ToLongTimeString() + "\t" + GXCommon.ToHex(ASCIIEncoding.ASCII.GetBytes(p.Reply), true));
+                        Console.WriteLine("Received: " + p.Reply);
                     }
-                    WriteTrace("-> " + DateTime.Now.ToLongTimeString() + "\t" + GXCommon.ToHex(ASCIIEncoding.ASCII.GetBytes(p.Reply), true));
-                    Console.WriteLine("Received: " + p.Reply);
                     if (serial != null)
                     {
-                        System.Threading.Thread.Sleep(400);
-                        serial.Close();
+                        Media.Close();
                         serial.BaudRate = BaudRate;
                         serial.DataBits = 8;
                         serial.Parity = Parity.None;
                         serial.StopBits = StopBits.One;
-                        System.Threading.Thread.Sleep(400);
-                        serial.Open();
-                        serial.ResetSynchronousBuffer();
+                        Media.Open();
+                        //Some meters need this sleep. Do not remove.
+                        Thread.Sleep(1000);
                     }
                 }
             }
@@ -357,23 +352,22 @@ namespace Gurux.DLMS.Client.Example
             //Generate AARQ request.
             //Split requests to multiple packets if needed.
             //If password is used all data might not fit to one packet.
-            foreach (byte[] it in Client.AARQRequest())
-            {
-                if (Trace)
-                {
-                    Console.WriteLine("Send AARQ request", GXCommon.ToHex(it, true));
-                }
-                reply.Clear();
-                ReadDLMSPacket(it, reply);
-            }
-            if (Trace)
-            {
-                Console.WriteLine("Parsing AARE reply" + reply.ToString());
-            }
-            //Parse reply.
-            Client.ParseAAREResponse(reply.Data);
             reply.Clear();
-            //Get challenge Is HSL authentication is used.
+            ReadDataBlock(Client.AARQRequest(), reply);
+            try
+            {
+                //Parse reply.
+                Client.ParseAAREResponse(reply.Data);
+                reply.Clear();
+            }
+            catch (Exception Ex)
+            {
+                reply.Clear();
+                ReadDLMSPacket(Client.DisconnectRequest(), reply);
+                throw Ex;
+            }
+
+            //Get challenge Is HLS authentication is used.
             if (Client.IsAuthenticationRequired)
             {
                 foreach (byte[] it in Client.GetApplicationAssociationRequest())
@@ -505,7 +499,7 @@ namespace Gurux.DLMS.Client.Example
         /// Read DLMS Data from the device.
         /// </summary>
         /// <param name="data">Data to send.</param>
-        /// <returns>Received data.</returns>
+        /// <param name="reply">Received data.</param>
         public void ReadDLMSPacket(byte[] data, GXReplyData reply)
         {
             if (data == null)

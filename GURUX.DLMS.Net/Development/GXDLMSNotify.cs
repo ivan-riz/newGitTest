@@ -71,32 +71,6 @@ namespace Gurux.DLMS
         }
 
         /// <summary>
-        /// Is General block transfer supported.
-        /// </summary>
-        public bool GeneralBlockTransfer
-        {
-            get
-            {
-                if (Settings.UseLogicalNameReferencing)
-                {
-                    return Settings.LnSettings.GeneralBlockTransfer;
-                }
-                return Settings.SnSettings.GeneralBlockTransfer;
-            }
-            set
-            {
-                if (Settings.UseLogicalNameReferencing)
-                {
-                    Settings.LnSettings.GeneralBlockTransfer = value;
-                }
-                else
-                {
-                    Settings.SnSettings.GeneralBlockTransfer = value;
-                }
-            }
-        }
-
-        /// <summary>
         /// Used priority in General Block Transfer.
         /// </summary>
         public Priority Priority
@@ -221,7 +195,6 @@ namespace Gurux.DLMS
         /// DLMS spesification do not specify the structure of Data-Notification body.
         /// So each manufacture can sent different data.
         /// </remarks>
-        /// <seealso cref="GetDataNotificationMessages"/>
         internal static void AddData(GXDLMSSettings settings, GXDLMSObject obj, int index, GXByteBuffer buff)
         {
             DataType dt;
@@ -262,7 +235,7 @@ namespace Gurux.DLMS
             byte[][] reply;
             if (UseLogicalNameReferencing)
             {
-                GXDLMSLNParameters p = new GXDLMSLNParameters(Settings, Command.DataNotification, 0, null, new GXByteBuffer(data), 0xff);
+                GXDLMSLNParameters p = new GXDLMSLNParameters(Settings, 0, Command.DataNotification, 0, null, new GXByteBuffer(data), 0xff);
                 p.time = time;
                 reply = GXDLMS.GetLnMessages(p);
             }
@@ -271,7 +244,7 @@ namespace Gurux.DLMS
                 GXDLMSSNParameters p = new GXDLMSSNParameters(Settings, Command.DataNotification, 1, 0, new GXByteBuffer(data), null);
                 reply = GXDLMS.GetSnMessages(p);
             }
-            if (!GeneralBlockTransfer && reply.Length != 1)
+            if ((Settings.ProposedConformance & Conformance.GeneralBlockTransfer) == 0 && reply.Length != 1)
             {
                 throw new ArgumentException("Data is not fit to one PDU. Use general block transfer.");
             }
@@ -289,7 +262,7 @@ namespace Gurux.DLMS
             byte[][] reply;
             if (UseLogicalNameReferencing)
             {
-                GXDLMSLNParameters p = new GXDLMSLNParameters(Settings, Command.DataNotification, 0, null, data, 0xff);
+                GXDLMSLNParameters p = new GXDLMSLNParameters(Settings, 0, Command.DataNotification, 0, null, data, 0xff);
                 p.time = time;
                 p.time.Skip |= DateTimeSkips.Ms;
                 reply = GXDLMS.GetLnMessages(p);
@@ -324,7 +297,7 @@ namespace Gurux.DLMS
             byte[][] reply;
             if (UseLogicalNameReferencing)
             {
-                GXDLMSLNParameters p = new GXDLMSLNParameters(Settings, Command.DataNotification, 0, null, buff, 0xff);
+                GXDLMSLNParameters p = new GXDLMSLNParameters(Settings, 0, Command.DataNotification, 0, null, buff, 0xff);
                 p.time = time;
                 reply = GXDLMS.GetLnMessages(p);
             }
@@ -364,7 +337,7 @@ namespace Gurux.DLMS
         /// <param name="data">Received data.</param>
         /// <returns>Array of objects and called indexes.</returns>
         public List<KeyValuePair<GXDLMSObject, int>>
-            ParsePush(Object[] data)
+            ParsePush(object[] data)
         {
             int index;
             GXDLMSObject obj;
@@ -375,14 +348,14 @@ namespace Gurux.DLMS
             {
                 GXDLMSConverter c = new GXDLMSConverter();
                 GXDLMSObjectCollection objects = new GXDLMSObjectCollection();
-                foreach (Object it in (Object[])data[0])
+                foreach (object it in (object[])data[0])
                 {
-                    Object[] tmp = (Object[])it;
-                    int classID = ((UInt16)(tmp[0])) & 0xFFFF;
+                    object[] tmp = (object[])it;
+                    int classID = ((ushort)(tmp[0])) & 0xFFFF;
                     if (classID > 0)
                     {
                         GXDLMSObject comp;
-                        comp = this.Objects.FindByLN((ObjectType)classID, GXDLMSObject.ToLogicalName(tmp[1] as byte[]));
+                        comp = this.Objects.FindByLN((ObjectType)classID, GXCommon.ToLogicalName(tmp[1] as byte[]));
                         if (comp == null)
                         {
                             comp = GXDLMSClient.CreateDLMSObject(classID, 0, 0, tmp[1], null);
@@ -396,7 +369,7 @@ namespace Gurux.DLMS
                         else
                         {
                             System.Diagnostics.Debug.WriteLine(string.Format("Unknown object : {0} {1}",
-                                classID, GXDLMSObject.ToLogicalName((byte[])tmp[1])));
+                                classID, GXCommon.ToLogicalName((byte[])tmp[1])));
                         }
                     }
                 }
@@ -407,7 +380,7 @@ namespace Gurux.DLMS
                     index = items[pos].Value;
                     if (value is byte[] && (dt = obj.GetUIDataType(index)) != DataType.None)
                     {
-                        value = GXDLMSClient.ChangeType(value as byte[], dt);
+                        value = GXDLMSClient.ChangeType(value as byte[], dt, Settings.UseUtc2NormalTime);
                     }
                     ValueEventArgs e = new ValueEventArgs(Settings, obj, index, 0, null);
                     e.Value = value;

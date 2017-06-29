@@ -47,14 +47,14 @@ namespace Gurux.DLMS.Secure
         /// <summary>
         /// Get Nonse from frame counter and system title.
         /// </summary>
-        /// <param name="FrameCounter">Frame counter.</param>
+        /// <param name="invocationCounter">Invocation counter.</param>
         /// <param name="systemTitle">System title.</param>
         /// <returns></returns>
-        static byte[] GetNonse(UInt32 FrameCounter, byte[] systemTitle)
+        static byte[] GetNonse(uint invocationCounter, byte[] systemTitle)
         {
             byte[] nonce = new byte[12];
             systemTitle.CopyTo(nonce, 0);
-            byte[] tmp = BitConverter.GetBytes(FrameCounter).Reverse().ToArray();
+            byte[] tmp = BitConverter.GetBytes(invocationCounter).Reverse().ToArray();
             tmp.CopyTo(nonce, 8);
             return nonce;
         }
@@ -68,10 +68,10 @@ namespace Gurux.DLMS.Secure
             {
                 data.SetUInt8((byte)param.Security);
             }
-            byte[] tmp = BitConverter.GetBytes(param.FrameCounter).Reverse().ToArray();
+            byte[] tmp = BitConverter.GetBytes(param.InvocationCounter).Reverse().ToArray();
             byte[] aad = GetAuthenticatedData(param.Security, param.AuthenticationKey, plainText);
             GXDLMSChipperingStream gcm = new GXDLMSChipperingStream(param.Security, true, param.BlockCipherKey,
-                    aad, GetNonse(param.FrameCounter, param.SystemTitle), null);
+                    aad, GetNonse(param.InvocationCounter, param.SystemTitle), null);
             // Encrypt the secret message
             if (param.Security != Gurux.DLMS.Enums.Security.Authentication)
             {
@@ -201,7 +201,7 @@ namespace Gurux.DLMS.Secure
             }
             len = Gurux.DLMS.Internal.GXCommon.GetObjectCount(data);
             p.Security = (Gurux.DLMS.Enums.Security)data.GetUInt8();
-            p.FrameCounter = data.GetUInt32();
+            p.InvocationCounter = data.GetUInt32();
             System.Diagnostics.Debug.WriteLine("Decrypt settings: " + p.ToString());
             System.Diagnostics.Debug.WriteLine("Encrypted: " + GXCommon.ToHex(data.Array(), true));
 
@@ -236,11 +236,21 @@ namespace Gurux.DLMS.Secure
                 data.Get(ciphertext);
                 data.Get(tag);
             }
-            byte[] aad = GetAuthenticatedData(p.Security, p.AuthenticationKey, data.Array());
-            byte[] iv = GetNonse(p.FrameCounter, p.SystemTitle);
+            byte[] aad = GetAuthenticatedData(p.Security, p.AuthenticationKey, ciphertext);
+            byte[] iv = GetNonse(p.InvocationCounter, p.SystemTitle);
             GXDLMSChipperingStream gcm = new GXDLMSChipperingStream(p.Security, true, p.BlockCipherKey, aad, iv, tag);
             gcm.Write(ciphertext);
-            return gcm.FlushFinalBlock();
+            ciphertext = gcm.FlushFinalBlock();
+            if (p.Security == Gurux.DLMS.Enums.Security.AuthenticationEncryption)
+            {
+                // Check tag.
+                EncryptAesGcm(p, ciphertext);
+                if (!GXDLMSChipperingStream.TagsEquals(tag, p.CountTag))
+                {
+                    //    throw new GXDLMSException("Decrypt failed. Invalid tag.");
+                }
+            }
+            return ciphertext;
         }
     }
 }

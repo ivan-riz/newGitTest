@@ -274,8 +274,7 @@ namespace Gurux.Common.JSon
             }
             else
             {
-                PropertyInfo pi = item.Target as PropertyInfo;
-                if (pi != null)
+                if (item.Target is PropertyInfo pi)
                 {
                     pi.SetValue(target, val, null);
                 }
@@ -1061,8 +1060,7 @@ namespace Gurux.Common.JSon
                         }
                         else
                         {
-                            PropertyInfo pi = item.Value.Target as PropertyInfo;
-                            if (pi != null)
+                            if (item.Value.Target is PropertyInfo pi)
                             {
                                 pi.SetValue(target, list2, null);
                             }
@@ -1083,8 +1081,7 @@ namespace Gurux.Common.JSon
                         }
                         else
                         {
-                            PropertyInfo pi = item.Value.Target as PropertyInfo;
-                            if (pi != null)
+                            if (item.Value.Target is PropertyInfo pi)
                             {
                                 val = pi.GetValue(target, null);
                             }
@@ -1106,8 +1103,7 @@ namespace Gurux.Common.JSon
                         }
                         else
                         {
-                            PropertyInfo pi = item.Value.Target as PropertyInfo;
-                            if (pi != null)
+                            if (item.Value.Target is PropertyInfo pi)
                             {
                                 pi.SetValue(target, Deserialize(value, tp, val), null);
                             }
@@ -1158,8 +1154,7 @@ namespace Gurux.Common.JSon
                     }
                     else
                     {
-                        PropertyInfo pi = item.Value.Target as PropertyInfo;
-                        if (pi != null)
+                        if (item.Value.Target is PropertyInfo pi)
                         {
                             pi.SetValue(target, list2, null);
                         }

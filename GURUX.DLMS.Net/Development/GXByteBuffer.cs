@@ -68,7 +68,7 @@ namespace Gurux.DLMS
         /// Buffer capacity.
         ///</param>
         [DebuggerStepThrough]
-        public GXByteBuffer(UInt16 capacity)
+        public GXByteBuffer(ushort capacity)
         {
             Capacity = capacity;
         }
@@ -200,6 +200,17 @@ namespace Gurux.DLMS
         }
 
         /// <summary>
+        /// Amount of not reed bytes in the buffer.
+        /// </summary>
+        public int Available
+        {
+            get
+            {
+                return size - position;
+            }
+        }
+
+        /// <summary>
         /// Returs data as byte array.
         /// </summary>
         /// <returns>Byte buffer as a byte array.</returns>
@@ -316,7 +327,7 @@ namespace Gurux.DLMS
         /// Push the given UInt16 into this buffer at the current position, and then increments the position.
         /// </summary>
         /// <param name="value">The value to be added.</param>
-        public void SetUInt16(UInt16 value)
+        public void SetUInt16(ushort value)
         {
             SetUInt16(Size, value);
             Size += 2;
@@ -326,7 +337,7 @@ namespace Gurux.DLMS
         /// Push the given Int16 into this buffer at the current position, and then increments the position.
         /// </summary>
         /// <param name="value">The value to be added.</param>
-        public void SetInt16(Int16 value)
+        public void SetInt16(short value)
         {
             SetInt16(Size, value);
             Size += 2;
@@ -335,9 +346,9 @@ namespace Gurux.DLMS
         /// <summary>
         /// Get UInt16 value from byte array from the current position and then increments the position.
         /// </summary>
-        public UInt16 GetUInt16()
+        public ushort GetUInt16()
         {
-            UInt16 value = GetUInt16(Position);
+            ushort value = GetUInt16(Position);
             Position += 2;
             return value;
         }
@@ -347,7 +358,7 @@ namespace Gurux.DLMS
         /// </summary>
         /// <param name="index">Zero based byte index where value is set.</param>
         /// <param name="value">The value to be added.</param>
-        public void SetUInt16(int index, UInt16 value)
+        public void SetUInt16(int index, ushort value)
         {
             if (index + 2 >= Capacity)
             {
@@ -362,7 +373,7 @@ namespace Gurux.DLMS
         /// </summary>
         /// <param name="index">Zero based byte index where value is set.</param>
         /// <param name="value">The value to be added.</param>
-        public void SetInt16(int index, Int16 value)
+        public void SetInt16(int index, short value)
         {
             if (index + 2 >= Capacity)
             {
@@ -376,7 +387,7 @@ namespace Gurux.DLMS
         /// Push the given UInt32 into this buffer at the current position, and then increments the position.
         /// </summary>
         /// <param name="value"> The value to be added.</param>
-        public void SetUInt32(UInt32 value)
+        public void SetUInt32(uint value)
         {
             SetUInt32(Size, value);
             Size += 4;
@@ -386,7 +397,7 @@ namespace Gurux.DLMS
         /// Push the given UInt32 into this buffer at the current position, and then increments the position.
         /// </summary>
         /// <param name="value"> The value to be added.</param>
-        public void SetInt32(Int32 value)
+        public void SetInt32(int value)
         {
             SetInt32(Size, value);
             Size += 4;
@@ -395,9 +406,9 @@ namespace Gurux.DLMS
         /// <summary>
         /// Get UInt32 value from byte array from the current position and then increments the position.
         /// </summary>
-        public UInt32 GetUInt32()
+        public uint GetUInt32()
         {
-            UInt32 value = GetUInt32(Position);
+            uint value = GetUInt32(Position);
             Position += 4;
             return value;
         }
@@ -407,16 +418,16 @@ namespace Gurux.DLMS
         /// </summary>
         /// <param name="index">Zero based byte index where value is set.</param>
         /// <param name="value"> The value to be added.</param>
-        public void SetUInt32(int index, UInt32 item)
+        public void SetUInt32(int index, uint value)
         {
             if (index + 4 >= Capacity)
             {
                 Capacity = (index + ArrayCapacity);
             }
-            Data[index] = (byte)((item >> 24) & 0xFF);
-            Data[index + 1] = (byte)((item >> 16) & 0xFF);
-            Data[index + 2] = (byte)((item >> 8) & 0xFF);
-            Data[index + 3] = (byte)(item & 0xFF);
+            Data[index] = (byte)((value >> 24) & 0xFF);
+            Data[index + 1] = (byte)((value >> 16) & 0xFF);
+            Data[index + 2] = (byte)((value >> 8) & 0xFF);
+            Data[index + 3] = (byte)(value & 0xFF);
         }
 
         /// <summary>
@@ -424,23 +435,23 @@ namespace Gurux.DLMS
         /// </summary>
         /// <param name="index">Zero based byte index where value is set.</param>
         /// <param name="value"> The value to be added.</param>
-        public void SetInt32(int index, Int32 item)
+        public void SetInt32(int index, int value)
         {
             if (index + 4 >= Capacity)
             {
                 Capacity = (index + ArrayCapacity);
             }
-            Data[index] = (byte)((item >> 24) & 0xFF);
-            Data[index + 1] = (byte)((item >> 16) & 0xFF);
-            Data[index + 2] = (byte)((item >> 8) & 0xFF);
-            Data[index + 3] = (byte)(item & 0xFF);
+            Data[index] = (byte)((value >> 24) & 0xFF);
+            Data[index + 1] = (byte)((value >> 16) & 0xFF);
+            Data[index + 2] = (byte)((value >> 8) & 0xFF);
+            Data[index + 3] = (byte)(value & 0xFF);
         }
 
         /// <summary>
         /// Push the given UInt64 into this buffer at the current position, and then increments the position.
         /// </summary>
         /// <param name="value"> The value to be added.</param>
-        public void SetUInt64(UInt64 value)
+        public void SetUInt64(ulong value)
         {
             SetUInt64(Size, value);
             Size += 8;
@@ -450,7 +461,7 @@ namespace Gurux.DLMS
         /// Push the given UInt64 into this buffer at the current position, and then increments the position.
         /// </summary>
         /// <param name="value"> The value to be added.</param>
-        public void SetInt64(Int64 value)
+        public void SetInt64(long value)
         {
             SetInt64(Size, value);
             Size += 8;
@@ -460,13 +471,13 @@ namespace Gurux.DLMS
         /// <summary>
         /// Get UInt64 value from byte array from the current position and then increments the position.
         /// </summary>
-        public UInt64 GetUInt64()
+        public ulong GetUInt64()
         {
             if (Position + 8 > Size)
             {
                 throw new System.OutOfMemoryException();
             }
-            UInt64 value = (UInt64)((Data[Position] & 0xFF) << 58 |
+            ulong value = (ulong)((Data[Position] & 0xFF) << 58 |
                                     (Data[Position + 1] & 0xFF) << 48 |
                                     (Data[Position + 2] & 0xFF) << 40 |
                                     (Data[Position + 3] & 0xFF) << 32 |
@@ -482,8 +493,8 @@ namespace Gurux.DLMS
         /// Push the given UInt64 into this buffer at the given position.
         /// </summary>
         /// <param name="index">Zero based byte index where value is set.</param>
-        /// <param name="value"> The value to be added.</param>
-        public void SetUInt64(int index, UInt64 item)
+        /// <param name="item"> The value to be added.</param>
+        public void SetUInt64(int index, ulong item)
         {
             if (index + 8 >= Capacity)
             {
@@ -503,8 +514,8 @@ namespace Gurux.DLMS
         /// Push the given UInt64 into this buffer at the given position.
         /// </summary>
         /// <param name="index">Zero based byte index where value is set.</param>
-        /// <param name="value"> The value to be added.</param>
-        public void SetInt64(int index, Int64 item)
+        /// <param name="item"> The value to be added.</param>
+        public void SetInt64(int index, long item)
         {
             if (index + 8 >= Capacity)
             {
@@ -547,21 +558,21 @@ namespace Gurux.DLMS
         /// Get UInt16 value from byte array.
         /// </summary>
         /// <param name="index">Byte index.</param>
-        public UInt16 GetUInt16(int index)
+        public ushort GetUInt16(int index)
         {
             if (index + 2 > Size)
             {
                 throw new System.OutOfMemoryException();
             }
-            return (UInt16)(((Data[index] & 0xFF) << 8) | (Data[index + 1] & 0xFF));
+            return (ushort)(((Data[index] & 0xFF) << 8) | (Data[index + 1] & 0xFF));
         }
 
         /// <summary>
         /// Get UInt32 value from byte array from the current position and then increments the position.
         /// </summary>
-        public Int32 GetInt32()
+        public int GetInt32()
         {
-            Int32 value = (Int32)GetUInt32(Position);
+            int value = (int)GetUInt32(Position);
             Position += 4;
             return value;
         }
@@ -569,9 +580,9 @@ namespace Gurux.DLMS
         /// <summary>
         /// Get Int16 value from byte array from the current position and then increments the position.
         /// </summary>
-        public Int16 GetInt16()
+        public short GetInt16()
         {
-            Int16 value = (Int16)GetInt16(Position);
+            short value = (short)GetInt16(Position);
             Position += 2;
             return value;
         }
@@ -580,26 +591,26 @@ namespace Gurux.DLMS
         /// Get Int16 value from byte array.
         /// </summary>
         /// <param name="index">Byte index.</param>
-        public Int16 GetInt16(int index)
+        public short GetInt16(int index)
         {
             if (index + 2 > Size)
             {
                 throw new System.OutOfMemoryException();
             }
-            return (Int16)(((Data[index] & 0xFF) << 8) | (Data[index + 1] & 0xFF));
+            return (short)(((Data[index] & 0xFF) << 8) | (Data[index + 1] & 0xFF));
         }
 
         /// <summary>
         /// Get Int32 value from byte array.
         /// </summary>
         /// <param name="index">Byte index.</param>
-        public UInt32 GetUInt32(int index)
+        public uint GetUInt32(int index)
         {
             if (index + 4 > Size)
             {
                 throw new System.OutOfMemoryException();
             }
-            return (UInt32)((Data[index] & 0xFF) << 24 | (Data[index + 1] & 0xFF) << 16 |
+            return (uint)((Data[index] & 0xFF) << 24 | (Data[index + 1] & 0xFF) << 16 |
                             (Data[index + 2] & 0xFF) << 8 | (Data[index + 3] & 0xFF));
         }
 
@@ -649,13 +660,13 @@ namespace Gurux.DLMS
         /// <summary>
         /// Get Int64 value from byte array from the current position and then increments the position.
         /// </summary>
-        public Int64 GetInt64()
+        public long GetInt64()
         {
             if (Position + 8 > Size)
             {
                 throw new System.OutOfMemoryException();
             }
-            Int64 value = (Int64)((Data[Position] & 0xFF) << 58 |
+            long value = (long)((Data[Position] & 0xFF) << 58 |
                                   (Data[Position + 1] & 0xFF) << 48 |
                                   (Data[Position + 2] & 0xFF) << 40 |
                                   (Data[Position + 3] & 0xFF) << 32 |
@@ -678,14 +689,52 @@ namespace Gurux.DLMS
         }
 
         /// <summary>
+        /// Check is byte buffer ASCII string.
+        /// </summary>
+        /// <param name="value"></param>
+        /// <returns></returns>
+        public static bool IsAsciiString(byte[] value)
+        {
+            if (value != null)
+            {
+                foreach (char it in value)
+                {
+                    if (it == 0)
+                    {
+                        return true;
+                    }
+                    if ((it < 32 || it > 127) && it != '\r' && it != '\n' && it != 0)
+                    {
+                        return false;
+                    }
+                }
+            }
+            return true;
+        }
+
+        /// <summary>
         /// Get String value from byte array.
         /// </summary>
         /// <param name="count">Byte count.</param>
         public string GetString(int count)
         {
-            string str = ASCIIEncoding.ASCII.GetString(Data, Position, count);
-            Position = (Position + count);
-            return str;
+            if (count == 0)
+            {
+                return string.Empty;
+            }
+            byte[] tmp = new byte[count];
+            Get(tmp);
+            if (IsAsciiString(tmp))
+            {
+                string str = ASCIIEncoding.ASCII.GetString(tmp);
+                int pos = str.IndexOf('\0');
+                if (pos != -1)
+                {
+                    str = str.Substring(0, pos);
+                }
+                return str;
+            }
+            return Gurux.DLMS.Internal.GXCommon.ToHex(tmp, true);
         }
 
         /// <summary>
@@ -800,7 +849,6 @@ namespace Gurux.DLMS
         /// Set new value to byte array.
         /// </summary>
         /// <param name="value">Byte array to add.</param>
-        /// <param name="index">Byte index.</param>
         /// <param name="count">Byte count.</param>
         public void Set(GXByteBuffer value, int count)
         {
@@ -832,29 +880,29 @@ namespace Gurux.DLMS
                 {
                     SetUInt8((byte)value);
                 }
-                else if (value is UInt16)
+                else if (value is ushort)
                 {
-                    SetUInt16((UInt16)value);
+                    SetUInt16((ushort)value);
                 }
-                else if (value is UInt32)
+                else if (value is uint)
                 {
-                    SetUInt32((UInt32)value);
+                    SetUInt32((uint)value);
                 }
-                else if (value is UInt64)
+                else if (value is ulong)
                 {
-                    SetUInt64((UInt64)value);
+                    SetUInt64((ulong)value);
                 }
-                else if (value is Int16)
+                else if (value is short)
                 {
-                    SetInt16((Int16)value);
+                    SetInt16((short)value);
                 }
-                else if (value is Int32)
+                else if (value is int)
                 {
-                    SetInt32((Int32)value);
+                    SetInt32((int)value);
                 }
-                else if (value is Int64)
+                else if (value is long)
                 {
-                    SetInt64((Int64)value);
+                    SetInt64((long)value);
                 }
                 else if (value is string)
                 {
@@ -935,6 +983,49 @@ namespace Gurux.DLMS
         public override string ToString()
         {
             return Gurux.DLMS.Internal.GXCommon.ToHex(Data, true, 0, Size);
+        }
+
+        /// <summary>
+        /// Get remaining data.
+        /// </summary>
+        /// <returns>Remaining data as byte array.</returns>
+        public byte[] Remaining()
+        {
+            return SubArray(position, size - position);
+        }
+
+
+        /// <summary>
+        /// Get remaining data as hex string.
+        /// </summary>
+        /// <param name="addSpace">Add space between bytes.</param>
+        /// <returns>Remaining data as hex string</returns>
+        public string RemainingHexString(bool addSpace)
+        {
+            return Gurux.DLMS.Internal.GXCommon.ToHex(Data, addSpace, position, size - position);
+        }
+
+        /// <summary>
+        /// Get data as hex string.
+        /// </summary>
+        /// <param name="addSpace">Add space between bytes.</param>
+        /// <param name="index">Byte index.</param>
+        /// <returns>Data as hex string.</returns>
+        public string ToHex(bool addSpace, int index)
+        {
+            return Gurux.DLMS.Internal.GXCommon.ToHex(Data, addSpace, index, Size - index);
+        }
+
+        /// <summary>
+        /// Get data as hex string.
+        /// </summary>
+        /// <param name="addSpace">Add space between bytes.</param>
+        /// <param name="index">Byte index.</param>
+        /// <param name="count">Byte count.</param>
+        /// <returns>Data as hex string.</returns>
+        public string ToHex(bool addSpace, int index, int count)
+        {
+            return Gurux.DLMS.Internal.GXCommon.ToHex(Data, addSpace, index, count);
         }
     }
 }

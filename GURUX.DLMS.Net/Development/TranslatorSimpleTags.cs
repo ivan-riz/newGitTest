@@ -52,6 +52,8 @@ namespace Gurux.DLMS
         internal static void GetGeneralTags(TranslatorOutputType type, SortedList<int, string> list)
         {
             GXDLMSTranslator.AddTag(list, Command.Snrm, "Snrm");
+            GXDLMSTranslator.AddTag(list, Command.UnacceptableFrame, "UnacceptableFrame");
+            GXDLMSTranslator.AddTag(list, Command.DisconnectMode, "DisconnectMode");
             GXDLMSTranslator.AddTag(list, Command.Ua, "Ua");
             GXDLMSTranslator.AddTag(list, Command.Aarq, "AssociationRequest");
             GXDLMSTranslator.AddTag(list, Command.Aare, "AssociationResponse");
@@ -59,6 +61,7 @@ namespace Gurux.DLMS
             GXDLMSTranslator.AddTag(list, Command.InitiateResponse, "InitiateResponse");
             GXDLMSTranslator.AddTag(list, Command.InitiateRequest, "InitiateRequest");
             GXDLMSTranslator.AddTag(list, TranslatorGeneralTags.NegotiatedQualityOfService, "NegotiatedQualityOfService");
+            GXDLMSTranslator.AddTag(list, TranslatorGeneralTags.ProposedQualityOfService, "ProposedQualityOfService");
             GXDLMSTranslator.AddTag(list, TranslatorGeneralTags.ProposedDlmsVersionNumber, "ProposedDlmsVersionNumber");
             GXDLMSTranslator.AddTag(list, TranslatorGeneralTags.ProposedMaxPduSize, "ProposedMaxPduSize");
             GXDLMSTranslator.AddTag(list, TranslatorGeneralTags.ProposedConformance, "ProposedConformance");
@@ -150,6 +153,16 @@ namespace Gurux.DLMS
             list.Add((int)(Command.AccessResponse) << 8 | (byte)AccessServiceCommandType.Get, "AccessResponseGet");
             list.Add((int)(Command.AccessResponse) << 8 | (byte)AccessServiceCommandType.Set, "AccessResponseSet");
             list.Add((int)(Command.AccessResponse) << 8 | (byte)AccessServiceCommandType.Action, "AccessResponseAction");
+            list.Add((int)TranslatorTags.AccessRequestBody, "AccessRequestBody");
+            list.Add((int)TranslatorTags.ListOfAccessRequestSpecification, "AccessRequestSpecification");
+            list.Add((int)TranslatorTags.AccessRequestSpecification, "_AccessRequestSpecification");
+            list.Add((int)TranslatorTags.AccessRequestListOfData, "AccessRequestListOfData");
+            list.Add((int)TranslatorTags.AccessResponseBody, "AccessResponseBody");
+            list.Add((int)TranslatorTags.ListOfAccessResponseSpecification, "AccessResponseSpecification");
+            list.Add((int)TranslatorTags.AccessResponseSpecification, "_AccessResponseSpecification");
+            list.Add((int)TranslatorTags.AccessResponseListOfData, "AccessResponseListOfData");
+            list.Add((int)TranslatorTags.Service, "Service");
+            list.Add((int)TranslatorTags.ServiceError, "ServiceError");
         }
 
         /// <summary>
@@ -171,6 +184,7 @@ namespace Gurux.DLMS
             GXDLMSTranslator.AddTag(list, Command.GloReadResponse, "glo_ReadResponse");
             GXDLMSTranslator.AddTag(list, Command.GloWriteRequest, "glo_WriteRequest");
             GXDLMSTranslator.AddTag(list, Command.GloWriteResponse, "glo_WriteResponse");
+            GXDLMSTranslator.AddTag(list, Command.GeneralGloCiphering, "GeneralGloCiphering");
         }
 
         /// <summary>
@@ -220,13 +234,14 @@ namespace Gurux.DLMS
             GXDLMSTranslator.AddTag(list, TranslatorTags.DataValue, "DataValue");
             GXDLMSTranslator.AddTag(list, TranslatorTags.CipheredService, "CipheredService");
             GXDLMSTranslator.AddTag(list, TranslatorTags.SystemTitle, "SystemTitle");
+            GXDLMSTranslator.AddTag(list, TranslatorTags.DataBlock, "DataBlock");
         }
 
         public static void GetDataTypeTags(SortedList<int, string> list)
         {
             list.Add(GXDLMS.DATA_TYPE_OFFSET + (int)DataType.None, "None");
             list.Add(GXDLMS.DATA_TYPE_OFFSET + (int)DataType.Array, "Array");
-            list.Add(GXDLMS.DATA_TYPE_OFFSET + (int)DataType.Bcd, "BCD");
+            list.Add(GXDLMS.DATA_TYPE_OFFSET + (int)DataType.Bcd, "Bcd");
             list.Add(GXDLMS.DATA_TYPE_OFFSET + (int)DataType.BitString,
                      "BitString");
             list.Add(GXDLMS.DATA_TYPE_OFFSET + (int)DataType.Boolean,
@@ -263,9 +278,9 @@ namespace Gurux.DLMS
             list.Add(GXDLMS.DATA_TYPE_OFFSET + (int)DataType.UInt8, "UInt8");
         }
 
-        public static String ErrorCodeToString(ErrorCode value)
+        public static string ErrorCodeToString(ErrorCode value)
         {
-            String str;
+            string str;
             switch (value)
             {
                 case ErrorCode.AccessViolated:
@@ -322,7 +337,7 @@ namespace Gurux.DLMS
             return str;
         }
 
-        public static ErrorCode ValueOfErrorCode(String value)
+        public static ErrorCode ValueOfErrorCode(string value)
         {
             ErrorCode v;
             if (string.Compare("AccessViolated", value, true) == 0)
@@ -396,9 +411,9 @@ namespace Gurux.DLMS
             return v;
         }
 
-        private static Dictionary<ServiceError, String> GetServiceErrors()
+        private static Dictionary<ServiceError, string> GetServiceErrors()
         {
-            Dictionary<ServiceError, String> list = new Dictionary<ServiceError, String>();
+            Dictionary<ServiceError, string> list = new Dictionary<ServiceError, string>();
             list.Add(ServiceError.ApplicationReference, "ApplicationReference");
             list.Add(ServiceError.HardwareResource, "HardwareResource");
             list.Add(ServiceError.VdeStateError, "VdeStateError");
@@ -411,10 +426,10 @@ namespace Gurux.DLMS
             return list;
         }
 
-        static Dictionary<ApplicationReference, String> GetApplicationReference()
+        static Dictionary<ApplicationReference, string> GetApplicationReference()
         {
-            Dictionary<ApplicationReference, String> list =
-                    new Dictionary<ApplicationReference, String>();
+            Dictionary<ApplicationReference, string> list =
+                    new Dictionary<ApplicationReference, string>();
             list.Add(ApplicationReference.ApplicationContextUnsupported,
                     "ApplicationContextUnsupported");
             list.Add(ApplicationReference.ApplicationReferenceInvalid,
@@ -429,10 +444,10 @@ namespace Gurux.DLMS
             return list;
         }
 
-        static Dictionary<HardwareResource, String> GetHardwareResource()
+        static Dictionary<HardwareResource, string> GetHardwareResource()
         {
-            Dictionary<HardwareResource, String> list =
-                    new Dictionary<HardwareResource, String>();
+            Dictionary<HardwareResource, string> list =
+                    new Dictionary<HardwareResource, string>();
             list.Add(HardwareResource.MassStorageUnavailable,
                     "MassStorageUnavailable");
             list.Add(HardwareResource.MemoryUnavailable, "MemoryUnavailable");
@@ -444,9 +459,9 @@ namespace Gurux.DLMS
             return list;
         }
 
-        static Dictionary<VdeStateError, String> GetVdeStateError()
+        static Dictionary<VdeStateError, string> GetVdeStateError()
         {
-            Dictionary<VdeStateError, String> list = new Dictionary<VdeStateError, String>();
+            Dictionary<VdeStateError, string> list = new Dictionary<VdeStateError, string>();
             list.Add(VdeStateError.LoadingDataSet, "LoadingDataSet");
             list.Add(VdeStateError.NoDlmsContext, "NoDlmsContext");
             list.Add(VdeStateError.Other, "Other");
@@ -455,18 +470,18 @@ namespace Gurux.DLMS
             return list;
         }
 
-        static Dictionary<Service, String> GetService()
+        static Dictionary<Service, string> GetService()
         {
-            Dictionary<Service, String> list = new Dictionary<Service, String>();
+            Dictionary<Service, string> list = new Dictionary<Service, string>();
             list.Add(Service.Other, "Other");
             list.Add(Service.PduSize, "PduSize");
             list.Add(Service.Unsupported, "ServiceUnsupported");
             return list;
         }
 
-        static Dictionary<Definition, String> GetDefinition()
+        static Dictionary<Definition, string> GetDefinition()
         {
-            Dictionary<Definition, String> list = new Dictionary<Definition, String>();
+            Dictionary<Definition, string> list = new Dictionary<Definition, string>();
             list.Add(Definition.ObjectAttributeInconsistent,
                     "ObjectAttributeInconsistent");
             list.Add(Definition.ObjectClassInconsistent,
@@ -476,9 +491,9 @@ namespace Gurux.DLMS
             return list;
         }
 
-        static Dictionary<Access, String> GetAccess()
+        static Dictionary<Access, string> GetAccess()
         {
-            Dictionary<Access, String> list = new Dictionary<Access, String>();
+            Dictionary<Access, string> list = new Dictionary<Access, string>();
             list.Add(Access.HardwareFault, "HardwareFault");
             list.Add(Access.ObjectAccessInvalid, "ObjectAccessInvalid");
             list.Add(Access.ObjectUnavailable, "ObjectUnavailable");
@@ -487,9 +502,9 @@ namespace Gurux.DLMS
             return list;
         }
 
-        static Dictionary<Initiate, String> GetInitiate()
+        static Dictionary<Initiate, string> GetInitiate()
         {
-            Dictionary<Initiate, String> list = new Dictionary<Initiate, String>();
+            Dictionary<Initiate, string> list = new Dictionary<Initiate, string>();
             list.Add(Initiate.DlmsVersionTooLow, "DlmsVersionTooLow");
             list.Add(Initiate.IncompatibleConformance, "IncompatibleConformance");
             list.Add(Initiate.Other, "Other");
@@ -498,9 +513,9 @@ namespace Gurux.DLMS
             return list;
         }
 
-        static Dictionary<LoadDataSet, String> GetLoadDataSet()
+        static Dictionary<LoadDataSet, string> GetLoadDataSet()
         {
-            Dictionary<LoadDataSet, String> list = new Dictionary<LoadDataSet, String>();
+            Dictionary<LoadDataSet, string> list = new Dictionary<LoadDataSet, string>();
             list.Add(LoadDataSet.DatasetNotReady, "DataSetNotReady");
             list.Add(LoadDataSet.DatasetSizeTooLarge, "DatasetSizeTooLarge");
             list.Add(LoadDataSet.InterpretationFailure, "InterpretationFailure");
@@ -513,9 +528,9 @@ namespace Gurux.DLMS
             return list;
         }
 
-        static Dictionary<Task, String> GetTask()
+        static Dictionary<Task, string> GetTask()
         {
-            Dictionary<Task, String> list = new Dictionary<Task, String>();
+            Dictionary<Task, string> list = new Dictionary<Task, string>();
             list.Add(Task.NoRemoteControl, "NoRemoteControl");
             list.Add(Task.Other, "Other");
             list.Add(Task.TiRunning, "tiRunning");
@@ -524,7 +539,7 @@ namespace Gurux.DLMS
             return list;
         }
 
-        internal static String GetServiceErrorValue(ServiceError error,
+        internal static string GetServiceErrorValue(ServiceError error,
                 byte value)
         {
             switch (error)
@@ -560,7 +575,7 @@ namespace Gurux.DLMS
         /// </summary>
         /// <param name="error">Service error enumeration value.</param>
         /// <returns>Service error simple XML tag.</returns>
-        internal static String ServiceErrorToString(ServiceError error)
+        internal static string ServiceErrorToString(ServiceError error)
         {
             return GetServiceErrors()[error];
         }
@@ -570,7 +585,7 @@ namespace Gurux.DLMS
         /// </summary>
         /// <param name="value">Service error simple XML tag.</param>
         /// <returns>Service error enumeration value.</returns>
-        internal static ServiceError GetServiceError(String value)
+        internal static ServiceError GetServiceError(string value)
         {
             foreach (var it in GetServiceErrors())
             {
@@ -582,7 +597,7 @@ namespace Gurux.DLMS
             throw new ArgumentException();
         }
 
-        private static int GetApplicationReference(String value)
+        private static int GetApplicationReference(string value)
         {
             int ret = -1;
             foreach (var it in GetApplicationReference())
@@ -600,7 +615,7 @@ namespace Gurux.DLMS
             return ret;
         }
 
-        private static int GetHardwareResource(String value)
+        private static int GetHardwareResource(string value)
         {
             int ret = -1;
             foreach (var it in GetHardwareResource())
@@ -618,7 +633,7 @@ namespace Gurux.DLMS
             return ret;
         }
 
-        private static int GetVdeStateError(String value)
+        private static int GetVdeStateError(string value)
         {
             int ret = -1;
             foreach (var it in GetVdeStateError())
@@ -636,7 +651,7 @@ namespace Gurux.DLMS
             return ret;
         }
 
-        private static int GetService(String value)
+        private static int GetService(string value)
         {
             int ret = -1;
             foreach (var it in GetService())
@@ -654,7 +669,7 @@ namespace Gurux.DLMS
             return ret;
         }
 
-        private static int GetDefinition(String value)
+        private static int GetDefinition(string value)
         {
             int ret = -1;
             foreach (var it in GetDefinition())
@@ -672,7 +687,7 @@ namespace Gurux.DLMS
             return ret;
         }
 
-        private static int GetAccess(String value)
+        private static int GetAccess(string value)
         {
             int ret = -1;
             foreach (var it in GetAccess())
@@ -690,7 +705,7 @@ namespace Gurux.DLMS
             return ret;
         }
 
-        private static int GetInitiate(String value)
+        private static int GetInitiate(string value)
         {
             int ret = -1;
             foreach (var it in GetInitiate())
@@ -708,7 +723,7 @@ namespace Gurux.DLMS
             return ret;
         }
 
-        private static int GetLoadDataSet(String value)
+        private static int GetLoadDataSet(string value)
         {
             int ret = -1;
             foreach (var it in GetLoadDataSet())
@@ -726,7 +741,7 @@ namespace Gurux.DLMS
             return ret;
         }
 
-        private static int GetTask(String value)
+        private static int GetTask(string value)
         {
             int ret = -1;
             foreach (var it in GetTask())
@@ -744,7 +759,7 @@ namespace Gurux.DLMS
             return ret;
         }
 
-        internal static byte GetError(ServiceError serviceError, String value)
+        internal static byte GetError(ServiceError serviceError, string value)
         {
             int ret = 0;
             switch (serviceError)

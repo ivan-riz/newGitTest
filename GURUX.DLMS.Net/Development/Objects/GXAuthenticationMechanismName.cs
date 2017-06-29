@@ -52,7 +52,7 @@ namespace Gurux.DLMS.Objects
             get;
             set;
         }
-        public UInt16 CountryName
+        public ushort CountryName
         {
             get;
             set;

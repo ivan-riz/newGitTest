@@ -33,11 +33,8 @@
 //---------------------------------------------------------------------------
 
 using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
 
-namespace Gurux.DLMS
+namespace Gurux.DLMS.Objects
 {
     /// <summary>
     /// Activity Calendar's Day profile is defined on the standard.
@@ -102,7 +99,7 @@ namespace Gurux.DLMS
         /// <summary>
         /// Constructor.
         /// </summary>
-        public GXDLMSDayProfileAction(GXDateTime startTime, string scriptLogicalName, UInt16 scriptSelector)
+        public GXDLMSDayProfileAction(GXTime startTime, string scriptLogicalName, ushort scriptSelector)
         {
             StartTime = startTime;
             ScriptLogicalName = scriptLogicalName;
@@ -112,7 +109,7 @@ namespace Gurux.DLMS
         /// <summary>
         /// Defines the time when the script is to be executed.
         /// </summary>
-        public GXDateTime StartTime
+        public GXTime StartTime
         {
             get;
             set;
@@ -130,7 +127,7 @@ namespace Gurux.DLMS
         /// <summary>
         /// Defines the script_identifier of the script to be executed.
         /// </summary>
-        public UInt16 ScriptSelector
+        public ushort ScriptSelector
         {
             get;
             set;
@@ -138,7 +135,7 @@ namespace Gurux.DLMS
 
         public override string ToString()
         {
-            return StartTime.ToString() + " " + ScriptLogicalName;
+            return StartTime.ToString() + " " + ScriptLogicalName + " " + ScriptSelector;
         }
     }
 }

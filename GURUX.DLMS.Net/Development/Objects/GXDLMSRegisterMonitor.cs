@@ -40,6 +40,7 @@ using System.Xml.Serialization;
 using Gurux.DLMS.ManufacturerSettings;
 using Gurux.DLMS.Internal;
 using Gurux.DLMS.Enums;
+using System.Xml;
 
 namespace Gurux.DLMS.Objects
 {
@@ -140,7 +141,7 @@ namespace Gurux.DLMS.Objects
         /// <inheritdoc cref="IGXDLMSBase.GetNames"/>
         string[] IGXDLMSBase.GetNames()
         {
-            return new string[] { Gurux.DLMS.Properties.Resources.LogicalNameTxt, "Thresholds", "Monitored Value", "Actions" };
+            return new string[] { Internal.GXCommon.GetLogicalNameString(), "Thresholds", "Monitored Value", "Actions" };
         }
 
         int IGXDLMSBase.GetAttributeCount()
@@ -179,7 +180,7 @@ namespace Gurux.DLMS.Objects
         {
             if (e.Index == 1)
             {
-                return this.LogicalName;
+                return GXCommon.LogicalNameToBytes(LogicalName);
             }
             if (e.Index == 2)
             {
@@ -191,7 +192,7 @@ namespace Gurux.DLMS.Objects
                 data.SetUInt8((int)DataType.Structure);
                 data.SetUInt8(3);
                 GXCommon.SetData(settings, data, DataType.UInt16, MonitoredValue.ObjectType); //ClassID
-                GXCommon.SetData(settings, data, DataType.OctetString, MonitoredValue.LogicalName); //Logical name.
+                GXCommon.SetData(settings, data, DataType.OctetString, GXCommon.LogicalNameToBytes(MonitoredValue.LogicalName)); //Logical name.
                 GXCommon.SetData(settings, data, DataType.Int8, MonitoredValue.AttributeIndex); //Attribute Index
                 return data.Array();
             }
@@ -212,11 +213,11 @@ namespace Gurux.DLMS.Objects
                         data.SetUInt8(2);
                         data.SetUInt8((int)DataType.Structure);
                         data.SetUInt8(2);
-                        GXCommon.SetData(settings, data, DataType.OctetString, it.ActionUp.LogicalName); //Logical name.
+                        GXCommon.SetData(settings, data, DataType.OctetString, GXCommon.LogicalNameToBytes(it.ActionUp.LogicalName)); //Logical name.
                         GXCommon.SetData(settings, data, DataType.UInt16, it.ActionUp.ScriptSelector); //ScriptSelector
                         data.SetUInt8((int)DataType.Structure);
                         data.SetUInt8(2);
-                        GXCommon.SetData(settings, data, DataType.OctetString, it.ActionDown.LogicalName); //Logical name.
+                        GXCommon.SetData(settings, data, DataType.OctetString, GXCommon.LogicalNameToBytes(it.ActionDown.LogicalName)); //Logical name.
                         GXCommon.SetData(settings, data, DataType.UInt16, it.ActionDown.ScriptSelector); //ScriptSelector
                     }
                 }
@@ -230,14 +231,7 @@ namespace Gurux.DLMS.Objects
         {
             if (e.Index == 1)
             {
-                if (e.Value is string)
-                {
-                    LogicalName = e.Value.ToString();
-                }
-                else
-                {
-                    LogicalName = GXDLMSClient.ChangeType((byte[])e.Value, DataType.OctetString).ToString();
-                }
+                LogicalName = GXCommon.ToLogicalName(e.Value);
             }
             else if (e.Index == 2)
             {
@@ -250,7 +244,7 @@ namespace Gurux.DLMS.Objects
                     MonitoredValue = new GXDLMSMonitoredValue();
                 }
                 MonitoredValue.ObjectType = (ObjectType)Convert.ToInt32(((object[])e.Value)[0]);
-                MonitoredValue.LogicalName = GXDLMSClient.ChangeType((byte[])((object[])e.Value)[1], DataType.OctetString).ToString();
+                MonitoredValue.LogicalName = GXCommon.ToLogicalName(((object[])e.Value)[1]);
                 MonitoredValue.AttributeIndex = Convert.ToInt32(((object[])e.Value)[2]);
             }
             else if (e.Index == 4)
@@ -259,13 +253,13 @@ namespace Gurux.DLMS.Objects
                 if (e.Value != null)
                 {
                     List<GXDLMSActionSet> items = new List<GXDLMSActionSet>();
-                    foreach (Object[] action_set in (Object[])e.Value)
+                    foreach (object[] action_set in (object[])e.Value)
                     {
                         GXDLMSActionSet set = new GXDLMSActionSet();
-                        set.ActionUp.LogicalName = GXDLMSClient.ChangeType((byte[])((Object[])action_set[0])[0], DataType.OctetString).ToString();
-                        set.ActionUp.ScriptSelector = Convert.ToUInt16(((Object[])action_set[0])[1]);
-                        set.ActionDown.LogicalName = GXDLMSClient.ChangeType((byte[])((Object[])action_set[1])[0], DataType.OctetString).ToString();
-                        set.ActionDown.ScriptSelector = Convert.ToUInt16(((Object[])action_set[1])[1]);
+                        set.ActionUp.LogicalName = GXCommon.ToLogicalName(((object[])action_set[0])[0]);
+                        set.ActionUp.ScriptSelector = Convert.ToUInt16(((object[])action_set[0])[1]);
+                        set.ActionDown.LogicalName = GXCommon.ToLogicalName(((object[])action_set[1])[0]);
+                        set.ActionDown.ScriptSelector = Convert.ToUInt16(((object[])action_set[1])[1]);
                         items.Add(set);
                     }
                     Actions = items.ToArray();
@@ -281,6 +275,96 @@ namespace Gurux.DLMS.Objects
         {
             e.Error = ErrorCode.ReadWriteDenied;
             return null;
+        }
+
+        void IGXDLMSBase.Load(GXXmlReader reader)
+        {
+            List<object> thresholds = new List<object>();
+            if (reader.IsStartElement("Thresholds", true))
+            {
+                while (reader.IsStartElement("Value", false))
+                {
+                    object it = reader.ReadElementContentAsObject("Value", null);
+                    thresholds.Add(it);
+                }
+                reader.ReadEndElement("Thresholds");
+            }
+            Thresholds = thresholds.ToArray();
+            if (reader.IsStartElement("MonitoredValue", true))
+            {
+                MonitoredValue.ObjectType = (ObjectType)reader.ReadElementContentAsInt("ObjectType");
+                MonitoredValue.LogicalName = reader.ReadElementContentAsString("LN");
+                MonitoredValue.AttributeIndex = reader.ReadElementContentAsInt("Index");
+                reader.ReadEndElement("MonitoredValue");
+            }
+
+            List<GXDLMSActionSet> list = new List<GXDLMSActionSet>();
+            if (reader.IsStartElement("Actions", true))
+            {
+                while (reader.IsStartElement("Item", true))
+                {
+                    GXDLMSActionSet it = new GXDLMSActionSet();
+                    list.Add(it);
+                    if (reader.IsStartElement("Up", true))
+                    {
+                        it.ActionUp.LogicalName = reader.ReadElementContentAsString("LN", null);
+                        it.ActionUp.ScriptSelector = (ushort)reader.ReadElementContentAsInt("Selector");
+                        reader.ReadEndElement("Up");
+                    }
+                    if (reader.IsStartElement("Down", true))
+                    {
+                        it.ActionUp.LogicalName = reader.ReadElementContentAsString("LN", null);
+                        it.ActionUp.ScriptSelector = (ushort)reader.ReadElementContentAsInt("Selector");
+                        reader.ReadEndElement("Down");
+                    }
+                }
+                reader.ReadEndElement("Actions");
+            }
+            Actions = list.ToArray();
+        }
+
+        void IGXDLMSBase.Save(GXXmlWriter writer)
+        {
+            if (Thresholds != null)
+            {
+                writer.WriteStartElement("Thresholds");
+                foreach (object it in Thresholds)
+                {
+                    writer.WriteElementObject("Value", it);
+                }
+                writer.WriteEndElement();
+            }
+            if (MonitoredValue != null)
+            {
+                writer.WriteStartElement("MonitoredValue");
+                writer.WriteElementString("ObjectType", (int)MonitoredValue.ObjectType);
+                writer.WriteElementString("LN", MonitoredValue.LogicalName);
+                writer.WriteElementString("Index", MonitoredValue.AttributeIndex);
+                writer.WriteEndElement();
+            }
+
+            if (Actions != null)
+            {
+                writer.WriteStartElement("Actions");
+                foreach (GXDLMSActionSet it in Actions)
+                {
+                    writer.WriteStartElement("Item");
+                    writer.WriteStartElement("Up");
+                    writer.WriteElementString("LN", it.ActionUp.LogicalName);
+                    writer.WriteElementString("Selector", it.ActionUp.ScriptSelector);
+                    writer.WriteEndElement();
+                    writer.WriteStartElement("Down");
+                    writer.WriteElementString("LN", it.ActionDown.LogicalName);
+                    writer.WriteElementString("Selector", it.ActionDown.ScriptSelector);
+                    writer.WriteEndElement();
+                    writer.WriteEndElement();
+                }
+                writer.WriteEndElement();
+            }
+        }
+
+        void IGXDLMSBase.PostLoad(GXXmlReader reader)
+        {
         }
 
         #endregion

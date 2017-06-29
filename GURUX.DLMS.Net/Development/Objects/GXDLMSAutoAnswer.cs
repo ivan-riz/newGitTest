@@ -41,6 +41,7 @@ using Gurux.DLMS.ManufacturerSettings;
 using Gurux.DLMS.Internal;
 using Gurux.DLMS.Objects.Enums;
 using Gurux.DLMS.Enums;
+using System.Xml;
 
 namespace Gurux.DLMS.Objects
 {
@@ -174,7 +175,7 @@ namespace Gurux.DLMS.Objects
         /// <inheritdoc cref="IGXDLMSBase.GetNames"/>
         string[] IGXDLMSBase.GetNames()
         {
-            return new string[] {Gurux.DLMS.Properties.Resources.LogicalNameTxt,
+            return new string[] {Internal.GXCommon.GetLogicalNameString(),
                              "Mode",
                              "Listening Window",
                              "Status",
@@ -227,7 +228,7 @@ namespace Gurux.DLMS.Objects
         {
             if (e.Index == 1)
             {
-                return this.LogicalName;
+                return GXCommon.LogicalNameToBytes(LogicalName);
             }
             if (e.Index == 2)
             {
@@ -278,14 +279,7 @@ namespace Gurux.DLMS.Objects
         {
             if (e.Index == 1)
             {
-                if (e.Value is string)
-                {
-                    LogicalName = e.Value.ToString();
-                }
-                else
-                {
-                    LogicalName = GXDLMSClient.ChangeType((byte[])e.Value, DataType.OctetString).ToString();
-                }
+                LogicalName = GXCommon.ToLogicalName(e.Value);
             }
             else if (e.Index == 2)
             {
@@ -296,10 +290,10 @@ namespace Gurux.DLMS.Objects
                 ListeningWindow.Clear();
                 if (e.Value != null)
                 {
-                    foreach (Object[] item in (Object[])e.Value)
+                    foreach (object[] item in (object[])e.Value)
                     {
-                        GXDateTime start = (GXDateTime)GXDLMSClient.ChangeType((byte[])item[0], DataType.DateTime);
-                        GXDateTime end = (GXDateTime)GXDLMSClient.ChangeType((byte[])item[1], DataType.DateTime);
+                        GXDateTime start = (GXDateTime)GXDLMSClient.ChangeType((byte[])item[0], DataType.DateTime, settings.UseUtc2NormalTime);
+                        GXDateTime end = (GXDateTime)GXDLMSClient.ChangeType((byte[])item[1], DataType.DateTime, settings.UseUtc2NormalTime);
                         ListeningWindow.Add(new KeyValuePair<GXDateTime, GXDateTime>(start, end));
                     }
                 }
@@ -317,8 +311,8 @@ namespace Gurux.DLMS.Objects
                 NumberOfRingsInListeningWindow = NumberOfRingsOutListeningWindow = 0;
                 if (e.Value != null)
                 {
-                    NumberOfRingsInListeningWindow = Convert.ToInt32(((Object[])e.Value)[0]);
-                    NumberOfRingsOutListeningWindow = Convert.ToInt32(((Object[])e.Value)[1]);
+                    NumberOfRingsInListeningWindow = Convert.ToInt32(((object[])e.Value)[0]);
+                    NumberOfRingsOutListeningWindow = Convert.ToInt32(((object[])e.Value)[1]);
                 }
             }
             else
@@ -331,6 +325,51 @@ namespace Gurux.DLMS.Objects
         {
             e.Error = ErrorCode.ReadWriteDenied;
             return null;
+        }
+
+        void IGXDLMSBase.Load(GXXmlReader reader)
+        {
+            Mode = (AutoAnswerMode)reader.ReadElementContentAsInt("Mode");
+            ListeningWindow.Clear();
+            if (reader.IsStartElement("ListeningWindow", true))
+            {
+                while (reader.IsStartElement("Item", true))
+                {
+                    GXDateTime start = new GXDateTime(reader.ReadElementContentAsString("Start"));
+                    GXDateTime end = new GXDateTime(reader.ReadElementContentAsString("End"));
+                    ListeningWindow.Add(new KeyValuePair<DLMS.GXDateTime, DLMS.GXDateTime>(start, end));
+                }
+                reader.ReadEndElement("ListeningWindow");
+            }
+            Status = (AutoAnswerStatus)reader.ReadElementContentAsInt("Status");
+            NumberOfCalls = reader.ReadElementContentAsInt("NumberOfCalls");
+            NumberOfRingsInListeningWindow = reader.ReadElementContentAsInt("NumberOfRingsInListeningWindow");
+            NumberOfRingsOutListeningWindow = reader.ReadElementContentAsInt("NumberOfRingsOutListeningWindow");
+        }
+
+        void IGXDLMSBase.Save(GXXmlWriter writer)
+        {
+            writer.WriteElementString("Mode", (int)Mode);
+            if (ListeningWindow != null)
+            {
+                writer.WriteStartElement("ListeningWindow");
+                foreach (KeyValuePair<GXDateTime, GXDateTime> it in ListeningWindow)
+                {
+                    writer.WriteStartElement("Item");
+                    writer.WriteElementString("Start", it.Key.ToFormatString());
+                    writer.WriteElementString("End", it.Value.ToFormatString());
+                    writer.WriteEndElement();
+                }
+                writer.WriteEndElement();
+            }
+            writer.WriteElementString("Status", (int)Status);
+            writer.WriteElementString("NumberOfCalls", NumberOfCalls);
+            writer.WriteElementString("NumberOfRingsInListeningWindow", NumberOfRingsInListeningWindow);
+            writer.WriteElementString("NumberOfRingsOutListeningWindow", NumberOfRingsOutListeningWindow);
+        }
+
+        void IGXDLMSBase.PostLoad(GXXmlReader reader)
+        {
         }
 
         #endregion

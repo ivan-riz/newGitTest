@@ -33,11 +33,13 @@
 //---------------------------------------------------------------------------
 
 using System;
+using System.Text;
+
 namespace Gurux.DLMS.Objects
 {
     public class GXDLMSEmergencyProfile
     {
-        public UInt16 ID
+        public ushort ID
         {
             get;
             set;
@@ -47,7 +49,7 @@ namespace Gurux.DLMS.Objects
             get;
             set;
         }
-        public UInt32 Duration
+        public uint Duration
         {
             get;
             set;
@@ -55,8 +57,16 @@ namespace Gurux.DLMS.Objects
 
         public override string ToString()
         {
-            return ID.ToString() + " " + Convert.ToString(ActivationTime) + " " + Duration.ToString();
+            StringBuilder sb = new StringBuilder();
+            sb.Append(ID);
+            sb.Append(" ");
+            if (ActivationTime != null)
+            {
+                sb.Append(ActivationTime.ToFormatString());
+            }
+            sb.Append(" ");
+            sb.Append(Duration);
+            return sb.ToString();
         }
     }
-
 }

@@ -44,7 +44,7 @@ namespace Gurux.DLMS.Enums
     /// Enumerates all comformace bits.
     /// </summary>
     [Flags]
-    public enum Conformance : UInt32
+    public enum Conformance : uint
     {
         /// <summary>
         /// Reserved zero conformance bit.
@@ -141,6 +141,10 @@ namespace Gurux.DLMS.Enums
         /// <summary>
         /// Action conformance bit.
         /// </summary>
-        Action = 0x1
+        Action = 0x1,
+        /// <summary>
+        /// Conformance is not used.
+        /// </summary>
+        None = 0
     }
 }

@@ -53,15 +53,96 @@ namespace Gurux.DLMS
         public GXDate()
             : base()
         {
-            Skip |= DateTimeSkips.Hour | DateTimeSkips.Minute | DateTimeSkips.Second | DateTimeSkips.Ms;
+            Skip = DateTimeSkips.Hour | DateTimeSkips.Minute | DateTimeSkips.Second | DateTimeSkips.Ms;
         }
+
         /// <summary>
         /// Constructor.
         /// </summary>
         public GXDate(DateTime value)
             : base(value)
         {
-            Skip |= DateTimeSkips.Hour | DateTimeSkips.Minute | DateTimeSkips.Second | DateTimeSkips.Ms;
+            Skip = DateTimeSkips.Hour | DateTimeSkips.Minute | DateTimeSkips.Second | DateTimeSkips.Ms;
+        }
+
+        /// <summary>
+        /// Constructor.
+        /// </summary>
+        public GXDate(GXDateTime value)
+            : base(value)
+        {
+            Skip = value.Skip | DateTimeSkips.Hour | DateTimeSkips.Minute | DateTimeSkips.Second | DateTimeSkips.Ms;
+        }
+
+        public GXDate(string date)
+            : base()
+        {
+            Skip = DateTimeSkips.Hour | DateTimeSkips.Minute | DateTimeSkips.Second | DateTimeSkips.Ms;
+            if (date != null)
+            {
+                System.Globalization.CultureInfo culture = System.Globalization.CultureInfo.CurrentUICulture;
+#if !WINDOWS_UWP
+                string dateSeparator = culture.DateTimeFormat.DateSeparator, timeSeparator = culture.DateTimeFormat.TimeSeparator;
+                List<string> shortDatePattern = new List<string>(culture.DateTimeFormat.ShortDatePattern.Split(new string[] { dateSeparator }, StringSplitOptions.RemoveEmptyEntries));
+#else
+                //In UWP Standard Date and Time Format Strings are used.
+                string dateSeparator = Internal.GXCommon.GetDateSeparator(), timeSeparator = Internal.GXCommon.GetTimeSeparator();
+                List<string> shortDatePattern = new List<string>("yyyy-MM-dd".Split(new string[] { dateSeparator }, StringSplitOptions.RemoveEmptyEntries));
+#endif
+                int year = 2000, month = 1, day = 1;
+                string[] values = date.Split(new string[] { dateSeparator }, StringSplitOptions.None);
+                if (shortDatePattern.Count != values.Length)
+                {
+                    throw new ArgumentOutOfRangeException("Invalid Date");
+                }
+                for (int pos = 0; pos != shortDatePattern.Count; ++pos)
+                {
+                    bool skip = false;
+                    if (values[pos] == "*")
+                    {
+                        skip = true;
+                    }
+                    if (shortDatePattern[pos] == "yyyy")
+                    {
+                        if (skip)
+                        {
+                            Skip |= DateTimeSkips.Year;
+                        }
+                        else
+                        {
+                            year = int.Parse(values[pos]);
+                        }
+                    }
+                    else if (string.Compare(shortDatePattern[pos], "m", true) == 0)
+                    {
+                        if (skip)
+                        {
+                            Skip |= DateTimeSkips.Month;
+                        }
+                        else
+                        {
+                            month = int.Parse(values[pos]);
+                        }
+                    }
+                    else if (string.Compare(shortDatePattern[pos], "d", true) == 0)
+                    {
+                        if (skip)
+                        {
+                            Skip |= DateTimeSkips.Day;
+                        }
+                        else
+                        {
+                            day = int.Parse(values[pos]);
+                        }
+                    }
+                    else
+                    {
+                        throw new ArgumentOutOfRangeException("Invalid Date pattern.");
+                    }
+                }
+                DateTime dt = new DateTime(year, month, day);
+                this.Value = new DateTimeOffset(dt, TimeZoneInfo.Local.GetUtcOffset(dt));
+            }
         }
 
         /// <summary>
@@ -70,6 +151,6 @@ namespace Gurux.DLMS
         public GXDate(int year, int month, int day)
             : base(year, month, day, -1, -1, -1, -1)
         {
-        }       
+        }
     }
 }

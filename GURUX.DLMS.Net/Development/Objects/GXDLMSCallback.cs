@@ -55,7 +55,7 @@ namespace Gurux.DLMS.Objects
             set;
         }
 
-        public String Message
+        public string Message
         {
             get;
             set;

@@ -40,225 +40,241 @@ using System.ComponentModel;
 using System.Xml.Serialization;
 using Gurux.DLMS.ManufacturerSettings;
 using Gurux.DLMS.Enums;
+using System.Xml;
+using Gurux.DLMS.Internal;
 
 namespace Gurux.DLMS.Objects
 {
-public class GXDLMSSFSKMacSynchronizationTimeouts : GXDLMSObject, IGXDLMSBase
-{
-    /// <summary>
-    /// Constructor.
-    /// </summary>
-    public GXDLMSSFSKMacSynchronizationTimeouts()
-    : this("0.0.26.2.0.255")
+    public class GXDLMSSFSKMacSynchronizationTimeouts : GXDLMSObject, IGXDLMSBase
     {
-    }
-
-    /// <summary>
-    /// Constructor.
-    /// </summary>
-    /// <param name="ln">Logical Name of the object.</param>
-    public GXDLMSSFSKMacSynchronizationTimeouts(string ln)
-    : base(ObjectType.SFSKMacSynchronizationTimeouts, ln, 0)
-    {
-    }
-
-    /// <summary>
-    /// Constructor.
-    /// </summary>
-    /// <param name="ln">Logical Name of the object.</param>
-    /// <param name="sn">Short Name of the object.</param>
-    public GXDLMSSFSKMacSynchronizationTimeouts(string ln, ushort sn)
-    : base(ObjectType.SFSKMacSynchronizationTimeouts, ln, sn)
-    {
-    }
-
-    /// <summary>
-    /// Search initiator timeout.
-    /// </summary>
-    [XmlIgnore()]
-    public UInt16 SearchInitiatorTimeout
-    {
-        get;
-        set;
-    }
-
-    /// <summary>
-    /// Synchronization confirmation timeout.
-    /// </summary>
-    [XmlIgnore()]
-    public UInt16 SynchronizationConfirmationTimeout
-    {
-        get;
-        set;
-    }
-
-    /// <summary>
-    /// Time out not addressed.
-    /// </summary>
-    [XmlIgnore()]
-    public UInt16 TimeOutNotAddressed
-    {
-        get;
-        set;
-    }
-
-    /// <summary>
-    /// Time out frame not OK.
-    /// </summary>
-    [XmlIgnore()]
-    public UInt16 TimeOutFrameNotOK
-    {
-        get;
-        set;
-    }
-
-    /// <inheritdoc cref="GXDLMSObject.GetValues"/>
-    public override object[] GetValues()
-    {
-        return new object[] { LogicalName, SearchInitiatorTimeout, SynchronizationConfirmationTimeout, TimeOutNotAddressed, TimeOutFrameNotOK };
-    }
-
-    #region IGXDLMSBase Members
-
-    byte[] IGXDLMSBase.Invoke(GXDLMSSettings settings, ValueEventArgs e)
-    {
-        e.Error = ErrorCode.ReadWriteDenied;
-        return null;
-    }
-
-    int[] IGXDLMSBase.GetAttributeIndexToRead()
-    {
-        List<int> attributes = new List<int>();
-        //LN is static and read only once.
-        if (string.IsNullOrEmpty(LogicalName))
+        /// <summary>
+        /// Constructor.
+        /// </summary>
+        public GXDLMSSFSKMacSynchronizationTimeouts()
+        : this("0.0.26.2.0.255")
         {
-            attributes.Add(1);
         }
-        //SearchInitiatorTimeout
-        if (CanRead(2))
-        {
-            attributes.Add(2);
-        }
-        //SynchronizationConfirmationTimeout
-        if (CanRead(3))
-        {
-            attributes.Add(3);
-        }
-        //TimeOutNotAddressed
-        if (CanRead(4))
-        {
-            attributes.Add(4);
-        }
-        //TimeOutFrameNotOK
-        if (CanRead(5))
-        {
-            attributes.Add(5);
-        }
-        return attributes.ToArray();
-    }
 
-    /// <inheritdoc cref="IGXDLMSBase.GetNames"/>
-    string[] IGXDLMSBase.GetNames()
-    {
-        return new string[] { Gurux.DLMS.Properties.Resources.LogicalNameTxt, "SearchInitiatorTimeout", "SynchronizationConfirmationTimeout", "TimeOutNotAddressed", "TimeOutFrameNotOK" };
-    }
+        /// <summary>
+        /// Constructor.
+        /// </summary>
+        /// <param name="ln">Logical Name of the object.</param>
+        public GXDLMSSFSKMacSynchronizationTimeouts(string ln)
+        : base(ObjectType.SFSKMacSynchronizationTimeouts, ln, 0)
+        {
+        }
 
-    int IGXDLMSBase.GetAttributeCount()
-    {
-        return 5;
-    }
+        /// <summary>
+        /// Constructor.
+        /// </summary>
+        /// <param name="ln">Logical Name of the object.</param>
+        /// <param name="sn">Short Name of the object.</param>
+        public GXDLMSSFSKMacSynchronizationTimeouts(string ln, ushort sn)
+        : base(ObjectType.SFSKMacSynchronizationTimeouts, ln, sn)
+        {
+        }
 
-    int IGXDLMSBase.GetMethodCount()
-    {
-        return 0;
-    }
+        /// <summary>
+        /// Search initiator timeout.
+        /// </summary>
+        [XmlIgnore()]
+        public ushort SearchInitiatorTimeout
+        {
+            get;
+            set;
+        }
 
-    /// <inheritdoc cref="IGXDLMSBase.GetDataType"/>
-    public override DataType GetDataType(int index)
-    {
-        if (index == 1)
+        /// <summary>
+        /// Synchronization confirmation timeout.
+        /// </summary>
+        [XmlIgnore()]
+        public ushort SynchronizationConfirmationTimeout
         {
-            return DataType.OctetString;
+            get;
+            set;
         }
-        if (index == 2)
-        {
-            return DataType.UInt16;
-        }
-        if (index == 3)
-        {
-            return DataType.UInt16;
-        }
-        if (index == 4)
-        {
-            return DataType.UInt16;
-        }
-        if (index == 5)
-        {
-            return DataType.UInt16;
-        }
-        throw new ArgumentException("GetDataType failed. Invalid attribute index.");
-    }
 
-    object IGXDLMSBase.GetValue(GXDLMSSettings settings, ValueEventArgs e)
-    {
-        if (e.Index == 1)
+        /// <summary>
+        /// Time out not addressed.
+        /// </summary>
+        [XmlIgnore()]
+        public ushort TimeOutNotAddressed
         {
-            return this.LogicalName;
+            get;
+            set;
         }
-        if (e.Index == 2)
-        {
-            return SearchInitiatorTimeout;
-        }
-        if (e.Index == 3)
-        {
-            return SynchronizationConfirmationTimeout;
-        }
-        if (e.Index == 4)
-        {
-            return TimeOutNotAddressed;
-        }
-        if (e.Index == 5)
-        {
-            return TimeOutFrameNotOK;
-        }
-        e.Error = ErrorCode.ReadWriteDenied;
-        return null;
-    }
 
-    void IGXDLMSBase.SetValue(GXDLMSSettings settings, ValueEventArgs e)
-    {
-        if (e.Index == 1)
+        /// <summary>
+        /// Time out frame not OK.
+        /// </summary>
+        [XmlIgnore()]
+        public ushort TimeOutFrameNotOK
         {
-            if (e.Value is string)
+            get;
+            set;
+        }
+
+        /// <inheritdoc cref="GXDLMSObject.GetValues"/>
+        public override object[] GetValues()
+        {
+            return new object[] { LogicalName, SearchInitiatorTimeout, SynchronizationConfirmationTimeout, TimeOutNotAddressed, TimeOutFrameNotOK };
+        }
+
+        #region IGXDLMSBase Members
+
+        byte[] IGXDLMSBase.Invoke(GXDLMSSettings settings, ValueEventArgs e)
+        {
+            e.Error = ErrorCode.ReadWriteDenied;
+            return null;
+        }
+
+        int[] IGXDLMSBase.GetAttributeIndexToRead()
+        {
+            List<int> attributes = new List<int>();
+            //LN is static and read only once.
+            if (string.IsNullOrEmpty(LogicalName))
             {
-                LogicalName = e.Value.ToString();
+                attributes.Add(1);
+            }
+            //SearchInitiatorTimeout
+            if (CanRead(2))
+            {
+                attributes.Add(2);
+            }
+            //SynchronizationConfirmationTimeout
+            if (CanRead(3))
+            {
+                attributes.Add(3);
+            }
+            //TimeOutNotAddressed
+            if (CanRead(4))
+            {
+                attributes.Add(4);
+            }
+            //TimeOutFrameNotOK
+            if (CanRead(5))
+            {
+                attributes.Add(5);
+            }
+            return attributes.ToArray();
+        }
+
+        /// <inheritdoc cref="IGXDLMSBase.GetNames"/>
+        string[] IGXDLMSBase.GetNames()
+        {
+            return new string[] { Internal.GXCommon.GetLogicalNameString(), "SearchInitiatorTimeout", "SynchronizationConfirmationTimeout", "TimeOutNotAddressed", "TimeOutFrameNotOK" };
+        }
+
+        int IGXDLMSBase.GetAttributeCount()
+        {
+            return 5;
+        }
+
+        int IGXDLMSBase.GetMethodCount()
+        {
+            return 0;
+        }
+
+        /// <inheritdoc cref="IGXDLMSBase.GetDataType"/>
+        public override DataType GetDataType(int index)
+        {
+            if (index == 1)
+            {
+                return DataType.OctetString;
+            }
+            if (index == 2)
+            {
+                return DataType.UInt16;
+            }
+            if (index == 3)
+            {
+                return DataType.UInt16;
+            }
+            if (index == 4)
+            {
+                return DataType.UInt16;
+            }
+            if (index == 5)
+            {
+                return DataType.UInt16;
+            }
+            throw new ArgumentException("GetDataType failed. Invalid attribute index.");
+        }
+
+        object IGXDLMSBase.GetValue(GXDLMSSettings settings, ValueEventArgs e)
+        {
+            if (e.Index == 1)
+            {
+                return GXCommon.LogicalNameToBytes(LogicalName);
+            }
+            if (e.Index == 2)
+            {
+                return SearchInitiatorTimeout;
+            }
+            if (e.Index == 3)
+            {
+                return SynchronizationConfirmationTimeout;
+            }
+            if (e.Index == 4)
+            {
+                return TimeOutNotAddressed;
+            }
+            if (e.Index == 5)
+            {
+                return TimeOutFrameNotOK;
+            }
+            e.Error = ErrorCode.ReadWriteDenied;
+            return null;
+        }
+
+        void IGXDLMSBase.SetValue(GXDLMSSettings settings, ValueEventArgs e)
+        {
+            if (e.Index == 1)
+            {
+                LogicalName = GXCommon.ToLogicalName(e.Value);
+            }
+            else if (e.Index == 2)
+            {
+                SearchInitiatorTimeout = (ushort)e.Value;
+            }
+            else if (e.Index == 3)
+            {
+                SynchronizationConfirmationTimeout = (ushort)e.Value;
+            }
+            else if (e.Index == 4)
+            {
+                TimeOutNotAddressed = (ushort)e.Value;
+            }
+            else if (e.Index == 5)
+            {
+                TimeOutFrameNotOK = (ushort)e.Value;
             }
             else
             {
-                LogicalName = GXDLMSClient.ChangeType((byte[])e.Value, DataType.OctetString).ToString();
+                e.Error = ErrorCode.ReadWriteDenied;
             }
         }
-        else if (e.Index == 2)
+
+        void IGXDLMSBase.Load(GXXmlReader reader)
         {
-            SearchInitiatorTimeout = (UInt16)e.Value;
+            SearchInitiatorTimeout = (ushort)reader.ReadElementContentAsInt("SearchInitiatorTimeout");
+            SynchronizationConfirmationTimeout = (ushort)reader.ReadElementContentAsInt("SynchronizationConfirmationTimeout");
+            TimeOutNotAddressed = (ushort)reader.ReadElementContentAsInt("TimeOutNotAddressed");
+            TimeOutFrameNotOK = (ushort)reader.ReadElementContentAsInt("TimeOutFrameNotOK");
         }
-        else if (e.Index == 3)
+
+        void IGXDLMSBase.Save(GXXmlWriter writer)
         {
-            SynchronizationConfirmationTimeout = (UInt16)e.Value;
+            writer.WriteElementString("SearchInitiatorTimeout", SearchInitiatorTimeout);
+            writer.WriteElementString("SynchronizationConfirmationTimeout", SynchronizationConfirmationTimeout);
+            writer.WriteElementString("TimeOutNotAddressed", TimeOutNotAddressed);
+            writer.WriteElementString("TimeOutFrameNotOK", TimeOutFrameNotOK);
         }
-        else if (e.Index == 4)
+
+        void IGXDLMSBase.PostLoad(GXXmlReader reader)
         {
-            TimeOutNotAddressed = (UInt16)e.Value;
         }
-        else if (e.Index == 5)
-        {
-            TimeOutFrameNotOK = (UInt16)e.Value;
-        }
-        else
-        {
-            e.Error = ErrorCode.ReadWriteDenied;
-        }
+
+        #endregion
     }
-    #endregion
-}
 }

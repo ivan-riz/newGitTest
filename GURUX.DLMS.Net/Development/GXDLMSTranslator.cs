@@ -40,7 +40,9 @@ namespace Gurux.DLMS
     using System.Collections;
     using System.Collections.Generic;
     using System.Xml;
+#if !WINDOWS_UWP
     using System.Xml.XPath;
+#endif
     using Gurux.DLMS.Enums;
     using Gurux.DLMS.Secure;
     using Gurux.DLMS.Objects;
@@ -195,12 +197,56 @@ namespace Gurux.DLMS
         }
 
         /// <summary>
+        /// Used security.
+        /// </summary>
+        public Gurux.DLMS.Enums.Security Security
+        {
+            get;
+            set;
+        }
+
+        /// <summary>
+        /// System title.
+        /// </summary>
+        public byte[] SystemTitle
+        {
+            get;
+            set;
+        }
+
+        /// <summary>
+        /// Block cipher key.
+        /// </summary>
+        public byte[] BlockCipherKey
+        {
+            get;
+            set;
+        }
+
+        /// <summary>
+        /// Authentication key.
+        /// </summary>
+        public byte[] AuthenticationKey
+        {
+            get;
+            set;
+        }
+
+        /// <summary>
+        /// Invocation Counter.
+        /// </summary>
+        public uint InvocationCounter
+        {
+            get;
+            set;
+        }
+
+        /// <summary>
         /// Constructor.
         /// </summary>
         /// <param name="type">Translator output type.</param>
         public GXDLMSTranslator(TranslatorOutputType type)
         {
-            Comments = true;
             OutputType = type;
             GetTags(type, tags, tagsByName);
             if (type == TranslatorOutputType.SimpleXml)
@@ -243,31 +289,32 @@ namespace Gurux.DLMS
         {
             GXDLMSSettings settings = new GXDLMSSettings(true);
             GXReplyData reply = new GXReplyData();
-            reply.Xml = new GXDLMSTranslatorStructure(OutputType, Hex, ShowStringAsHex, Comments, null);
+            reply.Xml = new GXDLMSTranslatorStructure(OutputType, OmitXmlNameSpace, Hex, ShowStringAsHex, Comments, tags);
             int pos;
+            bool found;
             while (data.Position != data.Size)
             {
                 if (type == InterfaceType.HDLC && data.GetUInt8(data.Position) == 0x7e)
                 {
                     pos = data.Position;
                     settings.InterfaceType = Enums.InterfaceType.HDLC;
-                    if (!GXDLMS.GetData(settings, data, reply))
-                    {
-                        ++pos;
-                    }
+                    found = GXDLMS.GetData(settings, data, reply);
                     data.Position = pos;
-                    break;
+                    if (found)
+                    {
+                        break;
+                    }
                 }
                 else if (type == InterfaceType.WRAPPER && data.GetUInt16(data.Position) == 0x1)
                 {
                     pos = data.Position;
                     settings.InterfaceType = Enums.InterfaceType.WRAPPER;
-                    if (!GXDLMS.GetData(settings, data, reply))
-                    {
-                        ++pos;
-                    }
+                    found = GXDLMS.GetData(settings, data, reply);
                     data.Position = pos;
-                    break;
+                    if (found)
+                    {
+                        break;
+                    }
                 }
                 ++data.Position;
             }
@@ -292,31 +339,32 @@ namespace Gurux.DLMS
         {
             GXDLMSSettings settings = new GXDLMSSettings(true);
             GXReplyData reply = new GXReplyData();
-            reply.Xml = new GXDLMSTranslatorStructure(OutputType, Hex, ShowStringAsHex, Comments, null);
+            reply.Xml = new GXDLMSTranslatorStructure(OutputType, OmitXmlNameSpace, Hex, ShowStringAsHex, Comments, null);
             int pos;
+            bool found;
             while (data.Position != data.Size)
             {
                 if (data.GetUInt8(data.Position) == 0x7e)
                 {
                     pos = data.Position;
                     settings.InterfaceType = Enums.InterfaceType.HDLC;
-                    if (!GXDLMS.GetData(settings, data, reply))
-                    {
-                        ++pos;
-                    }
+                    found = GXDLMS.GetData(settings, data, reply);
                     data.Position = pos;
-                    break;
+                    if (found)
+                    {
+                        break;
+                    }
                 }
                 else if (data.Position + 2 < data.Size && data.GetUInt16(data.Position) == 0x1)
                 {
                     pos = data.Position;
                     settings.InterfaceType = Enums.InterfaceType.WRAPPER;
-                    if (!GXDLMS.GetData(settings, data, reply))
-                    {
-                        ++pos;
-                    }
+                    found = GXDLMS.GetData(settings, data, reply);
                     data.Position = pos;
-                    break;
+                    if (found)
+                    {
+                        break;
+                    }
                 }
                 ++data.Position;
             }
@@ -376,15 +424,26 @@ namespace Gurux.DLMS
             }
         }
 
+
+        /// <summary>
+        /// Get PDU from data.
+        /// </summary>
+        /// <param name="value">Data.</param>
+        /// <returns>PDU from the data.</returns>
         public byte[] GetPdu(byte[] value)
         {
             return GetPdu(new GXByteBuffer(value));
         }
 
+        /// <summary>
+        /// Get PDU from data.
+        /// </summary>
+        /// <param name="value">Data.</param>
+        /// <returns>PDU from the data.</returns>
         public byte[] GetPdu(GXByteBuffer value)
         {
             GXReplyData data = new GXReplyData();
-            data.Xml = new GXDLMSTranslatorStructure(OutputType, Hex, ShowStringAsHex, Comments, tags);
+            data.Xml = new GXDLMSTranslatorStructure(OutputType, OmitXmlNameSpace, Hex, ShowStringAsHex, Comments, tags);
             GXDLMSSettings settings = new GXDLMSSettings(true);
             if (value.GetUInt8(0) == 0x7e)
             {
@@ -408,6 +467,16 @@ namespace Gurux.DLMS
             return data.Data.Array();
         }
 
+
+        /// <summary>
+        ///  Clear MessageToXml internal settings.
+        /// </summary>
+        public void Clear()
+        {
+            multipleFrames = false;
+            pduFrames.Clear();
+        }
+
         /// <summary>
         /// Convert message to xml.
         /// </summary>
@@ -418,6 +487,21 @@ namespace Gurux.DLMS
         public string MessageToXml(byte[] value)
         {
             return MessageToXml(new GXByteBuffer(value));
+        }
+
+        private GXCiphering GetCiphering()
+        {
+            if (this.Security != Security.None)
+            {
+                GXCiphering c = new Secure.GXCiphering(this.SystemTitle);
+                c.Security = this.Security;
+                c.SystemTitle = this.SystemTitle;
+                c.BlockCipherKey = this.BlockCipherKey;
+                c.AuthenticationKey = this.AuthenticationKey;
+                c.InvocationCounter = this.InvocationCounter;
+                return c;
+            }
+            return null;
         }
 
         /// <summary>
@@ -433,16 +517,17 @@ namespace Gurux.DLMS
             {
                 throw new ArgumentNullException("value");
             }
+            GXReplyData data = new GXReplyData();
+            GXDLMSTranslatorStructure xml = new GXDLMSTranslatorStructure(OutputType, OmitXmlNameSpace, Hex, ShowStringAsHex, Comments, tags);
+            data.Xml = xml;
             try
             {
-                GXReplyData data = new GXReplyData();
-                GXDLMSTranslatorStructure xml = new GXDLMSTranslatorStructure(OutputType, Hex, ShowStringAsHex, Comments, tags);
-                data.Xml = xml;
                 //If HDLC framing.
                 int offset = value.Position;
+                GXDLMSSettings settings = new GXDLMSSettings(true);
+                settings.Cipher = GetCiphering();
                 if (value.GetUInt8(value.Position) == 0x7e)
                 {
-                    GXDLMSSettings settings = new GXDLMSSettings(true);
                     settings.InterfaceType = Enums.InterfaceType.HDLC;
                     if (GXDLMS.GetData(settings, value, data))
                     {
@@ -475,14 +560,22 @@ namespace Gurux.DLMS
                                 if (CompletePdu)
                                 {
                                     pduFrames.Set(data.Data.Data);
+                                    if (data.MoreData == RequestTypes.None)
+                                    {
+                                        xml.AppendLine(PduToXml(pduFrames, true, true));
+                                        pduFrames.Clear();
+                                    }
                                 }
                                 else
                                 {
                                     xml.AppendLine("<NextFrame Value=\"" + GXCommon.ToHex(data.Data.Data, false, data.Data.Position, data.Data.Size - data.Data.Position) + "\" />");
                                 }
-                                multipleFrames = false;
+                                if (data.MoreData != RequestTypes.DataBlock)
+                                {
+                                    multipleFrames = false;
+                                }
                             }
-                            if (!data.IsMoreData)
+                            else
                             {
                                 if (!PduOnly)
                                 {
@@ -490,18 +583,15 @@ namespace Gurux.DLMS
                                 }
                                 if (pduFrames.Size != 0)
                                 {
-                                    if (!CompletePdu)
-                                    {
-                                        pduFrames.Set(data.Data.Data);
-                                    }
-                                    xml.AppendLine(PduToXml(pduFrames));
+                                    pduFrames.Set(data.Data.Data);
+                                    xml.AppendLine(PduToXml(pduFrames, true, true));
                                     pduFrames.Clear();
                                 }
                                 else
                                 {
-                                    xml.AppendLine(PduToXml(data.Data));
+                                    xml.AppendLine(PduToXml(data.Data, true, true));
                                 }
-                                //Remove \r\n.
+                                // Remove \r\n.
                                 xml.sb.Length -= 2;
                                 if (!PduOnly)
                                 {
@@ -519,7 +609,6 @@ namespace Gurux.DLMS
                 //If wrapper.
                 if (value.GetUInt16(value.Position) == 1)
                 {
-                    GXDLMSSettings settings = new GXDLMSSettings(true);
                     settings.InterfaceType = Enums.InterfaceType.WRAPPER;
                     GXDLMS.GetData(settings, value, data);
                     if (!PduOnly)
@@ -552,43 +641,16 @@ namespace Gurux.DLMS
                         }
                         else
                         {
-                            if (multipleFrames || (data.MoreData & Enums.RequestTypes.Frame) != 0)
+                            if (!PduOnly)
                             {
-                                if (CompletePdu)
-                                {
-                                    pduFrames.Set(data.Data.Data);
-                                }
-                                else
-                                {
-                                    xml.AppendLine("<NextFrame Value=\"" + GXCommon.ToHex(data.Data.Data, false, data.Data.Position, data.Data.Size - data.Data.Position) + "\" />");
-                                }
-                                multipleFrames = false;
+                                xml.AppendLine("<PDU>");
                             }
-                            if (!data.IsMoreData)
+                            xml.AppendLine(PduToXml(data.Data));
+                            //Remove \r\n.
+                            xml.sb.Length -= 2;
+                            if (!PduOnly)
                             {
-                                if (!PduOnly)
-                                {
-                                    xml.AppendLine("<PDU>");
-                                }
-                                if (pduFrames.Size != 0)
-                                {
-                                    if (!CompletePdu)
-                                    {
-                                        pduFrames.Set(data.Data.Data);
-                                    }
-                                    xml.AppendLine(PduToXml(pduFrames));
-                                    pduFrames.Clear();
-                                }
-                                else
-                                {
-                                    xml.AppendLine(PduToXml(data.Data));
-                                }
-                                //Remove \r\n.
-                                xml.sb.Length -= 2;
-                                if (!PduOnly)
-                                {
-                                    xml.AppendLine("</PDU>");
-                                }
+                                xml.AppendLine("</PDU>");
                             }
                         }
                     }
@@ -601,7 +663,8 @@ namespace Gurux.DLMS
             }
             catch (Exception ex)
             {
-                System.Diagnostics.Debug.Write(ex.ToString());
+                xml.sb.AppendLine(ex.Message);
+                return xml.sb.ToString();
             }
             throw new ArgumentNullException("Invalid DLMS framing.");
         }
@@ -632,7 +695,7 @@ namespace Gurux.DLMS
             data.GetUInt8(); // Skip FromatID
             data.GetUInt8(); // Skip Group ID.
             data.GetUInt8(); // Skip Group len
-            Object val;
+            object val;
             while (data.Position < data.Size)
             {
                 HDLCInfo id = (HDLCInfo)data.GetUInt8();
@@ -686,20 +749,39 @@ namespace Gurux.DLMS
 
         private string PduToXml(GXByteBuffer value, bool omitDeclaration, bool omitNameSpace)
         {
+            GXDLMSTranslatorStructure xml = new GXDLMSTranslatorStructure(OutputType, OmitXmlNameSpace, Hex, ShowStringAsHex, Comments, tags);
+            return PduToXml(xml, value, omitDeclaration, omitNameSpace);
+        }
+
+        private string PduToXml(GXDLMSTranslatorStructure xml, GXByteBuffer value, bool omitDeclaration, bool omitNameSpace)
+        {
             if (value == null || value.Size == 0)
             {
                 throw new ArgumentNullException("value");
             }
-            GXDLMSTranslatorStructure xml = new GXDLMSTranslatorStructure(OutputType, Hex, ShowStringAsHex, Comments, tags);
             GXDLMSSettings settings = new GXDLMSSettings(true);
+            settings.Cipher = GetCiphering();
             GXReplyData data = new GXReplyData();
             byte cmd = value.GetUInt8();
+            byte[] tmp;
             switch (cmd)
             {
                 case (byte)Command.Aarq:
                     value.Position = 0;
-                    settings = new GXDLMSSettings(true);
                     GXAPDU.ParsePDU(settings, settings.Cipher, value, xml);
+                    break;
+                case (byte)Command.InitiateRequest:
+                    value.Position = 0;
+                    settings = new GXDLMSSettings(true);
+                    GXAPDU.ParseInitiate(true, settings, settings.Cipher, value,
+                            xml);
+                    break;
+                case (byte)Command.InitiateResponse:
+                    value.Position = 0;
+                    settings = new GXDLMSSettings(false);
+                    settings.Cipher = GetCiphering();
+                    GXAPDU.ParseInitiate(true, settings, settings.Cipher, value,
+                            xml);
                     break;
                 case 0x81://Ua
                     value.Position = 0;
@@ -708,6 +790,7 @@ namespace Gurux.DLMS
                 case (byte)Command.Aare:
                     value.Position = 0;
                     settings = new GXDLMSSettings(false);
+                    settings.Cipher = GetCiphering();
                     GXAPDU.ParsePDU(settings, settings.Cipher, value, xml);
                     break;
                 case (byte)Command.GetRequest:
@@ -776,12 +859,35 @@ namespace Gurux.DLMS
                 case (byte)Command.GloSetResponse:
                 case (byte)Command.GloMethodRequest:
                 case (byte)Command.GloMethodResponse:
+                    if (settings.Cipher != null && Comments)
+                    {
+                        int originalPosition = value.Position;
+                        --value.Position;
+                        AesGcmParameter p = new AesGcmParameter(settings.Cipher.SystemTitle, settings.Cipher.BlockCipherKey, settings.Cipher.AuthenticationKey);
+                        GXByteBuffer data2 = new GXByteBuffer(GXDLMSChippering.DecryptAesGcm(p, value));
+                        xml.StartComment("Decrypt data:");
+                        PduToXml(xml, data2, omitDeclaration, omitNameSpace);
+                        xml.EndComment();
+                        value.Position = originalPosition;
+                    }
+
                     int cnt = GXCommon.GetObjectCount(value);
                     xml.AppendLine(cmd, "Value", GXCommon.ToHex(value.Data, false, value.Position, value.Size - value.Position));
                     break;
                 case (byte)Command.GeneralGloCiphering:
+                    if (settings.Cipher != null && Comments)
+                    {
+                        int originalPosition = value.Position;
+                        --value.Position;
+                        AesGcmParameter p = new AesGcmParameter(settings.Cipher.SystemTitle, settings.Cipher.BlockCipherKey, settings.Cipher.AuthenticationKey);
+                        GXByteBuffer data2 = new GXByteBuffer(GXDLMSChippering.DecryptAesGcm(p, value));
+                        xml.StartComment("Decrypt data:");
+                        PduToXml(xml, data2, omitDeclaration, omitNameSpace);
+                        xml.EndComment();
+                        value.Position = originalPosition;
+                    }
                     int len = GXCommon.GetObjectCount(value);
-                    byte[] tmp = new byte[len];
+                    tmp = new byte[len];
                     value.Get(tmp);
                     xml.AppendStartTag(Command.GeneralGloCiphering);
                     xml.AppendLine(TranslatorTags.SystemTitle, null,
@@ -928,7 +1034,7 @@ namespace Gurux.DLMS
         private static void HandleAarqAare(XmlNode node, GXDLMSXmlSettings s, int tag)
         {
             byte[] tmp;
-            byte[] conformanceBlock;
+            Conformance c;
             int value;
             switch (tag)
             {
@@ -994,17 +1100,6 @@ namespace Gurux.DLMS
                         bb.Set(tmp);
                         GXAPDU.ParseUserInformation(s.settings,
                                                     s.settings.Cipher, bb, null);
-                        if (s.command == Command.Aarq)
-                        {
-                            if (s.settings.UseLogicalNameReferencing)
-                            {
-                                s.settings.LnSettings.Conformance = s.settings.NegotiatedConformance;
-                            }
-                            else
-                            {
-                                s.settings.SnSettings.Conformance = s.settings.NegotiatedConformance;
-                            }
-                        }
                     }
                     break;
                 case 0xBE00:
@@ -1059,42 +1154,29 @@ namespace Gurux.DLMS
                 case 0xBE03:
                 case 0xBE05:
                     //ProposedConformance or NegotiatedConformance
-                    if (s.settings.UseLogicalNameReferencing)
+                    if (s.settings.IsServer)
                     {
-                        s.settings.LnSettings.Clear();
+                        s.settings.NegotiatedConformance = Conformance.None;
                     }
                     else
                     {
-                        s.settings.SnSettings.Clear();
+                        s.settings.ProposedConformance = Conformance.None;
                     }
                     if (s.OutputType == TranslatorOutputType.StandardXml)
                     {
-                        String nodes = node.InnerText;
-
-                        if (s.settings.UseLogicalNameReferencing)
-                        {
-                            conformanceBlock = s.settings.LnSettings.ConformanceBlock;
-                        }
-                        else
-                        {
-                            conformanceBlock = s.settings.SnSettings.ConformanceBlock;
-                        }
-                        foreach (String it in nodes.Split(' '))
+                        string nodes = node.InnerText;
+                        foreach (string it in nodes.Split(' '))
                         {
                             if (it.Trim() != string.Empty)
                             {
-                                value = (int)TranslatorStandardTags.ValueOfConformance(it.Trim());
-                                if (value < 0x100)
+                                c = TranslatorStandardTags.ValueOfConformance(it.Trim());
+                                if (s.settings.IsServer)
                                 {
-                                    conformanceBlock[2] |= (byte)value;
-                                }
-                                else if (value < 0x10000)
-                                {
-                                    conformanceBlock[1] |= (byte)(value >> 8);
+                                    s.settings.NegotiatedConformance |= c;
                                 }
                                 else
                                 {
-                                    conformanceBlock[0] |= (byte)(value >> 16);
+                                    s.settings.ProposedConformance |= c;
                                 }
                             }
                         }
@@ -1102,26 +1184,14 @@ namespace Gurux.DLMS
                     break;
                 case 0xBE08:
                     //ConformanceBit.
-                    value = (int)Enum.Parse(typeof(Conformance), node.Attributes["Name"].InnerText);
-                    if (s.settings.UseLogicalNameReferencing)
+                    c = (Conformance)Enum.Parse(typeof(Conformance), node.Attributes["Name"].InnerText);
+                    if (s.settings.IsServer)
                     {
-                        conformanceBlock = s.settings.LnSettings.ConformanceBlock;
+                        s.settings.NegotiatedConformance |= c;
                     }
                     else
                     {
-                        conformanceBlock = s.settings.SnSettings.ConformanceBlock;
-                    }
-                    if (value < 0x100)
-                    {
-                        conformanceBlock[2] |= (byte)value;
-                    }
-                    else if (value < 0x10000)
-                    {
-                        conformanceBlock[1] |= (byte)(value >> 8);
-                    }
-                    else
-                    {
-                        conformanceBlock[0] |= (byte)(value >> 16);
+                        s.settings.ProposedConformance |= c;
                     }
                     break;
                 case 0xA2:
@@ -1131,7 +1201,7 @@ namespace Gurux.DLMS
                 case 0xBE02:
                 case 0xBE07:
                     //NegotiatedMaxPduSize or ProposedMaxPduSize.
-                    s.settings.MaxPduSize = (UInt16)s.ParseInt(GetValue(node, s));
+                    s.settings.MaxPduSize = (ushort)s.ParseInt(GetValue(node, s));
                     break;
                 case 0xA3:
                     //ResultSourceDiagnostic
@@ -1205,10 +1275,10 @@ namespace Gurux.DLMS
                     GXCommon.SetData(s.settings, s.data, DataType.Boolean, s.ParseShort(GetValue(node, s)));
                     break;
                 case DataType.Date:
-                    GXCommon.SetData(s.settings, s.data, DataType.Date, GXDLMSClient.ChangeType(GXCommon.HexToBytes(GetValue(node, s)), DataType.DateTime));
+                    GXCommon.SetData(s.settings, s.data, DataType.Date, GXDLMSClient.ChangeType(GXCommon.HexToBytes(GetValue(node, s)), DataType.DateTime, s.settings.UseUtc2NormalTime));
                     break;
                 case DataType.DateTime:
-                    GXCommon.SetData(s.settings, s.data, DataType.DateTime, GXDLMSClient.ChangeType(GXCommon.HexToBytes(GetValue(node, s)), DataType.DateTime));
+                    GXCommon.SetData(s.settings, s.data, DataType.DateTime, GXDLMSClient.ChangeType(GXCommon.HexToBytes(GetValue(node, s)), DataType.DateTime, s.settings.UseUtc2NormalTime));
                     break;
                 case DataType.Enum:
                     GXCommon.SetData(s.settings, s.data, DataType.Enum, s.ParseShort(GetValue(node, s)));
@@ -1263,7 +1333,7 @@ namespace Gurux.DLMS
                     s.data.Size = 0;
                     break;
                 case DataType.Time:
-                    GXCommon.SetData(s.settings, s.data, DataType.Time, GXDLMSClient.ChangeType(GXCommon.HexToBytes(GetValue(node, s)), DataType.DateTime));
+                    GXCommon.SetData(s.settings, s.data, DataType.Time, GXDLMSClient.ChangeType(GXCommon.HexToBytes(GetValue(node, s)), DataType.DateTime, s.settings.UseUtc2NormalTime));
                     break;
                 case DataType.UInt16:
                     GXCommon.SetData(s.settings, s.data, DataType.UInt16, s.ParseInt(GetValue(node, s)));
@@ -1329,7 +1399,7 @@ namespace Gurux.DLMS
         }
 
         static ErrorCode ValueOfErrorCode(TranslatorOutputType type,
-                                          String value)
+                                          string value)
         {
             if (type == TranslatorOutputType.StandardXml)
             {
@@ -1341,7 +1411,7 @@ namespace Gurux.DLMS
             }
         }
 
-        internal static String ErrorCodeToString(TranslatorOutputType type,
+        internal static string ErrorCodeToString(TranslatorOutputType type,
                 ErrorCode value)
         {
             if (type == TranslatorOutputType.StandardXml)
@@ -1376,7 +1446,7 @@ namespace Gurux.DLMS
                     {
                         dt = DataType.Time;
                     }
-                    s.time = (GXDateTime)GXDLMSClient.ChangeType(tmp, dt);
+                    s.time = (GXDateTime)GXDLMSClient.ChangeType(tmp, dt, s.settings.UseUtc2NormalTime);
                 }
             }
             return preData;
@@ -1386,14 +1456,21 @@ namespace Gurux.DLMS
             XmlNode node, GXDLMSXmlSettings s)
         {
             int tag = 0;
-            String str;
+            string str;
             if (s.OutputType == TranslatorOutputType.SimpleXml)
             {
                 str = node.Name.ToLower();
             }
             else
             {
-                str = node.Name;
+                if (node.Name.StartsWith("x:"))
+                {
+                    str = node.Name.Substring(2);
+                }
+                else
+                {
+                    str = node.Name;
+                }
             }
             if (s.command != Command.ConfirmedServiceError
                     || s.tags.ContainsKey(str))
@@ -1401,7 +1478,7 @@ namespace Gurux.DLMS
                 tag = s.tags[str];
             }
             ErrorCode err;
-            UInt32 value;
+            uint value;
             byte[] tmp;
             GXByteBuffer preData = null;
             if (s.command == Command.None)
@@ -1601,7 +1678,7 @@ namespace Gurux.DLMS
                         {
                             s.settings.ServiceClass = ServiceClass.UnConfirmed;
                         }
-                        s.settings.longInvokeID = (UInt16)(value & 0xFFFFFFF);
+                        s.settings.longInvokeID = (ushort)(value & 0xFFFFFFF);
                         break;
                     case 0x88:
                         //ResponderACSERequirement
@@ -1613,7 +1690,7 @@ namespace Gurux.DLMS
                     case (int)TranslatorTags.AttributeDescriptor:
                         break;
                     case (int)TranslatorTags.ClassId:
-                        s.attributeDescriptor.SetUInt16((UInt16)s.ParseInt(GetValue(node, s)));
+                        s.attributeDescriptor.SetUInt16((ushort)s.ParseInt(GetValue(node, s)));
                         break;
                     case (int)TranslatorTags.InstanceId:
                         s.attributeDescriptor.Add(GXCommon.HexToBytes(GetValue(node, s)));
@@ -1639,13 +1716,15 @@ namespace Gurux.DLMS
                         break;
                     case (int)TranslatorTags.BlockNumber:
                         //BlockNumber
-                        if (s.command == Command.GetRequest || s.command == Command.GetResponse)
+                        if (s.command == Command.GetRequest || s.command == Command.GetResponse ||
+                            s.command == Command.SetRequest || s.command == Command.SetResponse ||
+                            s.command == Command.MethodRequest || s.command == Command.MethodResponse)
                         {
-                            s.data.SetUInt32((UInt32)s.ParseLong(GetValue(node, s)));
+                            s.data.SetUInt32((uint)s.ParseLong(GetValue(node, s)));
                         }
                         else
                         {
-                            s.data.SetUInt16((UInt16)s.ParseInt(GetValue(node, s)));
+                            s.data.SetUInt16((ushort)s.ParseInt(GetValue(node, s)));
                         }
                         break;
                     case (int)TranslatorTags.RawData:
@@ -1679,7 +1758,6 @@ namespace Gurux.DLMS
                             {
                                 s.attributeDescriptor.SetUInt8((byte)ValueOfErrorCode(s.OutputType, str));
                             }
-
                         }
                         else if (s.command == Command.AccessResponse)
                         {
@@ -1743,12 +1821,12 @@ namespace Gurux.DLMS
                             }
                             if (s.OutputType == TranslatorOutputType.SimpleXml)
                             {
-                                s.attributeDescriptor.SetUInt16((UInt16)s.ParseShort(GetValue(node, s)));
+                                s.attributeDescriptor.SetUInt16((ushort)s.ParseShort(GetValue(node, s)));
                             }
                             else
                             {
                                 str = GetValue(node, s);
-                                if (!String.IsNullOrEmpty(str))
+                                if (!string.IsNullOrEmpty(str))
                                 {
                                     s.attributeDescriptor.SetInt16(Int16.Parse(str));
                                 }
@@ -1802,6 +1880,8 @@ namespace Gurux.DLMS
                     case (int)TranslatorTags.CipheredService:
                         tmp = GXCommon.HexToBytes(GetValue(node, s));
                         s.data.Set(tmp);
+                        break;
+                    case (int)TranslatorTags.DataBlock:
                         break;
                     default:
                         throw new ArgumentException("Invalid node: " + node.Name);
@@ -1887,7 +1967,7 @@ namespace Gurux.DLMS
                 case Command.SetResponse:
                 case Command.MethodRequest:
                 case Command.MethodResponse:
-                    ln = new GXDLMSLNParameters(s.settings, s.command, s.requestType,
+                    ln = new GXDLMSLNParameters(s.settings, 0, s.command, s.requestType,
                                                 s.attributeDescriptor, s.data, 0xff);
                     GXDLMS.GetLNPdu(ln, bb);
                     break;
@@ -1905,7 +1985,7 @@ namespace Gurux.DLMS
                     GXCommon.SetObjectCount(s.data.Size, bb);
                     bb.Set(s.data);
                     break;
-                case Command.Rejected:
+                case Command.UnacceptableFrame:
                     break;
                 case Command.Snrm:
                     s.settings.IsServer = false;
@@ -1944,17 +2024,17 @@ namespace Gurux.DLMS
                 case Command.GeneralBlockTransfer:
                     break;
                 case Command.AccessRequest:
-                    ln = new GXDLMSLNParameters(s.settings, s.command, s.requestType,
+                    ln = new GXDLMSLNParameters(s.settings, 0, s.command, s.requestType,
                                                 s.attributeDescriptor, s.data, 0xff);
                     GXDLMS.GetLNPdu(ln, bb);
                     break;
                 case Command.AccessResponse:
-                    ln = new GXDLMSLNParameters(s.settings, s.command, s.requestType,
+                    ln = new GXDLMSLNParameters(s.settings, 0, s.command, s.requestType,
                                                 s.attributeDescriptor, s.data, 0xff);
                     GXDLMS.GetLNPdu(ln, bb);
                     break;
                 case Command.DataNotification:
-                    ln = new GXDLMSLNParameters(s.settings, s.command, s.requestType,
+                    ln = new GXDLMSLNParameters(s.settings, 0, s.command, s.requestType,
                                                 s.attributeDescriptor, s.data, 0xff);
                     ln.time = s.time;
                     GXDLMS.GetLNPdu(ln, bb);

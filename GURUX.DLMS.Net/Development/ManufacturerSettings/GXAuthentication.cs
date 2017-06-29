@@ -44,11 +44,13 @@ namespace Gurux.DLMS.ManufacturerSettings
     /// <summary>
     /// Authentication class is used to give authentication iformation to the server.
     /// </summary>
+#if !WINDOWS_UWP
     [Serializable]
+#endif
     public class GXAuthentication
     {
         public GXAuthentication()
-        {            
+        {
         }
 
         public override string ToString()
@@ -59,7 +61,7 @@ namespace Gurux.DLMS.ManufacturerSettings
         /// <summary>
         /// Constructor.
         /// </summary>
-        /// <param name="auth">Authentication type</param>
+        /// <param name="type">Authentication type</param>
         /// <param name="clientAddress">Client address.</param>
         public GXAuthentication(Authentication type, int clientAddress) :
             this(type, "", clientAddress)
@@ -84,12 +86,14 @@ namespace Gurux.DLMS.ManufacturerSettings
                 Password = pw;
             }
             ClientAddress = clientAddress;
-        }       
+        }
 
         /// <summary>
         /// Is authentication selected.
         /// </summary>
+#if !WINDOWS_UWP
         [Browsable(false)]
+#endif
         [DefaultValue(false)]
         public bool Selected
         {
@@ -100,7 +104,9 @@ namespace Gurux.DLMS.ManufacturerSettings
         /// <summary>
         /// Authentication type
         /// </summary>
+#if !WINDOWS_UWP
         [Browsable(false)]
+#endif
         public Authentication Type
         {
             get;
@@ -110,7 +116,9 @@ namespace Gurux.DLMS.ManufacturerSettings
         /// <summary>
         /// Client address.
         /// </summary>
+#if !WINDOWS_UWP
         [Browsable(false)]
+#endif
         [DefaultValue(0)]
         public int ClientAddress
         {
@@ -121,7 +129,9 @@ namespace Gurux.DLMS.ManufacturerSettings
         /// <summary>
         /// Client address has replace this. Opsolite
         /// </summary>
+#if !WINDOWS_UWP
         [Browsable(false)]
+#endif
         [DefaultValue(0)]
         public object ClientID
         {
@@ -138,12 +148,14 @@ namespace Gurux.DLMS.ManufacturerSettings
         /// <summary>
         /// Used password.
         /// </summary>
+#if !WINDOWS_UWP
         [Browsable(false)]
+#endif
         [DefaultValue(null)]
         public string Password
         {
             get;
             set;
-        }       
+        }
     }
 }
